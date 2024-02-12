@@ -14,7 +14,7 @@ def get_config():
 def get_usage(user, computer, ssh):
     # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
     global timekpra_userinfo_output
-    fail_json = {'time_left': 0, 'time_spent': 0, 'result': 'fail'}
+    fail_json = {'time_left': 0, 'time_spent': 0, 'week_spent': 0, 'week_limit': 0, 'result': 'fail'}
     try:
         timekpra_userinfo_output = str(ssh.run(
                 conf.ssh_timekpra_bin + ' --userinfo ' + user,
@@ -35,6 +35,10 @@ def get_usage(user, computer, ssh):
     time_left = re.search(search, timekpra_userinfo_output)
     search = r"(TIME_SPENT_DAY: )([0-9]+)"
     time_spent = re.search(search, timekpra_userinfo_output)
+    search = r"(TIME_SPENT_WEEK: )([0-9]+)"
+    week_spent = re.search(search, timekpra_userinfo_output)
+    search = r"(LIMIT_PER_WEEK: )([0-9]+)"
+    week_limit = re.search(search, timekpra_userinfo_output)
     # todo - better handle "else" when we can't find time remaining
     if not time_left or not time_left.group(2):
         print(f"Error getting time left, setting to 0. ssh call result: " + str(timekpra_userinfo_output))
@@ -42,8 +46,10 @@ def get_usage(user, computer, ssh):
     else:
         time_left = str(time_left.group(2))
         time_spent = str(time_spent.group(2))
+        week_spent = str(week_spent.group(2))
+        week_limit = str(week_limit.group(2))
         print(f"Time left for {user} at {computer}: {time_left}")
-        return {'time_left': time_left, 'time_spent': time_spent, 'result': 'success'}
+        return {'time_left': time_left, 'time_spent': time_spent, 'week_spent': week_spent,'week_limit': week_limit, 'result': 'success'}
 
 
 def get_connection(computer):

@@ -185,8 +185,10 @@
                     "<span class='user' id='" + user + rand_dom + "'>" +
                         "<p  class='h3'>" + user + "<span class='notify loading'></span></p>" +
                         "<span class='time_wrapper'>" +
-                            "Unused: <span class='time time_left'>...</span> " +
-                            "Used: " +
+                            "W Unused: <span class='time week_left'>...</span> " +
+                            "W Used: <span class='time week_spent'>...</span><br/> " +
+                            "D Unused: <span class='time time_left'>...</span> " +
+                            "D Used: " +
                                 "<span class='time time_spent'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
@@ -219,7 +221,7 @@
         });
 
         function get_times(rand_dom){
-            const second_options = [300, 900, 1800, 2700, 3600];
+            const second_options = [60, 300, 1800, 2700, 3600];
             let times = '';
             $.each(second_options, function (index, seconds) {
                 times = times + "<input type='radio'  class='btn-check'  value='" + seconds + "' id='" + seconds +  rand_dom + "' name='seconds' />" +
@@ -260,6 +262,9 @@
                         $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                     }, 1000);
                 });
+                const remainingTime = usage.week_limit - usage.week_spent;
+                $('#' + user + rand_dom + " .week_left").html(secondsToHms(remainingTime));
+                $('#' + user + rand_dom + " .week_spent").html(secondsToHms(usage.week_spent));
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
