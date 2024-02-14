@@ -2,7 +2,7 @@ import main
 import conf, re, os
 from fabric import Connection
 from paramiko.ssh_exception import AuthenticationException
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory, redirect
 
 app = Flask(__name__)
 
@@ -19,11 +19,6 @@ def validate_request(computer, user):
 @app.route("/config")
 def config():
     return main.get_config()
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
 
 
 @app.route("/get_usage/<computer>/<user>")
@@ -63,6 +58,32 @@ def decrease_time(computer, user, seconds):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
         'favicon.ico',mimetype='image/vnd.microsoft.icon')
+
+## User Config
+
+def update_config(option):
+    current_value = main.config.getboolean('Settings', option)
+    new_value = not current_value
+    main.config.set('Settings', option, str(new_value))
+    with open('user_config.ini', 'w') as config_file:
+        main.config.write(config_file)
+
+@app.route('/')
+def index():
+    option1_value = main.config.getboolean('Settings', 'Option1')
+    option2_value = main.config.getboolean('Settings', 'Option2')
+    option3_value = main.config.getboolean('Settings', 'Option3')
+    # Add more options as necessary
+    return render_template('index.html', option1=option1_value, option2=option2_value, option3=option3_value)
+
+@app.route('/update_config', methods=['POST'])
+def update_config_route():
+    options_to_toggle = ['Option1', 'Option2', 'Option3']
+    for option in options_to_toggle:
+        if option in request.form:
+            print(f"Updating {option}")
+            update_config(option)
+    return redirect('/')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

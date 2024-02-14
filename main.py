@@ -2,6 +2,8 @@
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 import conf, re
+import configparser
+import os
 from fabric import Connection
 from paramiko.ssh_exception import AuthenticationException
 from paramiko.ssh_exception import NoValidConnectionsError
@@ -86,4 +88,20 @@ def increase_time(seconds, ssh, user):
 def decrease_time(seconds, ssh, user):
     return adjust_time('-', seconds, ssh, user)
 
+config_path = 'user_config.ini'
+
+if not os.path.isfile(config_path):
+    # Create default config if user_config.ini does not exist
+    default_config = configparser.ConfigParser()
+    default_config['Settings'] = {
+        'Option1': 'False',
+        'Option2': 'True',
+        'Option3': 'False',
+    }
+
+    with open(config_path, 'w') as config_file:
+        default_config.write(config_file)
+
+config = configparser.ConfigParser()
+config.read(config_path)
 
