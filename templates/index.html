@@ -177,7 +177,7 @@
       <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Home</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">Config</a>
+      <a class="nav-link" id="config-tab" data-toggle="tab" href="#config" role="tab" aria-controls="config" aria-selected="false">Config</a>
     </li>
   </ul>
 
@@ -189,7 +189,7 @@
     </div>
 
     <!-- Config Area -->
-    <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+    <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
       <br>
         <div class="form-check form-switch">
           <form action="/update_config" method="post">
@@ -380,9 +380,16 @@
         })
 
        // Update User Config
-        function updateConfig(option, form) {
-        // Update config directly when using the switch
-          form.submit();
+       function updateConfig(option, form) {
+            $.ajax({
+                type: "POST",
+                url: "/update_config",
+                data: { option: option },
+                success: function(newConfig) {
+                    // Verarbeite die Antwort hier
+                    console.log(newConfig);
+                }
+            });
         }
 
     </script>

@@ -70,20 +70,27 @@ def update_config(option):
 
 @app.route('/')
 def index():
+    # Load with settings from user_config.ini
     option1_value = main.config.getboolean('Settings', 'Option1')
     option2_value = main.config.getboolean('Settings', 'Option2')
     option3_value = main.config.getboolean('Settings', 'Option3')
     # Add more options as necessary
-    return render_template('index.html', option1=option1_value, option2=option2_value, option3=option3_value)
+    return render_template(
+        'index.html',
+        option1=option1_value,
+        option2=option2_value,
+        option3=option3_value
+        )
 
 @app.route('/update_config', methods=['POST'])
 def update_config_route():
-    options_to_toggle = ['Option1', 'Option2', 'Option3']
-    for option in options_to_toggle:
-        if option in request.form:
-            print(f"Updating {option}")
-            update_config(option)
-    return redirect('/')
+    option = request.form.get('option')
+    if option:
+        print(f"Updating {option}")
+        update_config(option)
+        return {'result': "success"}, 200
+    else:
+        return {'result': "error", 'message': "Option not provided"}, 400
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
