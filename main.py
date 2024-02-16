@@ -88,6 +88,8 @@ def increase_time(seconds, ssh, user):
 def decrease_time(seconds, ssh, user):
     return adjust_time('-', seconds, ssh, user)
 
+## User Config
+
 config_path = 'user_config.ini'
 
 if not os.path.isfile(config_path):

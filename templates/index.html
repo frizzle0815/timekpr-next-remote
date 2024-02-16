@@ -380,16 +380,15 @@
         })
 
        // Update User Config
-       function updateConfig(option, form) {
-            $.ajax({
-                type: "POST",
-                url: "/update_config",
-                data: { option: option },
-                success: function(newConfig) {
-                    // Verarbeite die Antwort hier
-                    console.log(newConfig);
-                }
-            });
+        function updateConfig(option, form) {
+          $.ajax({
+              type: "POST",
+              url: "/update_config",
+              data: { option: option },
+              success: function(newConfig) {
+                console.log(newConfig);
+              }
+          });
         }
 
     </script>
