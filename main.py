@@ -156,9 +156,9 @@ def adjust_time(up_down_string, seconds, ssh, user):
     command = conf.ssh_timekpra_bin + ' --settimeleft ' + user + ' ' + up_down_string + ' ' + str(seconds)
     ssh.run(command)
     if up_down_string == '-':
-        print(f"added {str(seconds)} for user {user}")
-    else:
         print(f"removed {str(seconds)} for user {user}")
+    else:
+        print(f"added {str(seconds)} for user {user}")
     # todo - return false if this fails
     return True
 

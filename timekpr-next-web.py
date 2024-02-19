@@ -29,7 +29,7 @@ def get_usage(computer, user):
     usage = main.get_usage(user, computer, ssh)
     ### Debug
     print(f"{__file__} {__name__}: {usage}")
-    return {'result': usage['result'], "time_left": usage['time_left'], "time_spent": usage['time_spent']}, 200
+    return usage, 200
 
 
 @app.route("/increase_time/<computer>/<user>/<seconds>")
@@ -39,7 +39,7 @@ def increase_time(computer, user, seconds):
     ssh = main.get_connection(computer)
     if main.increase_time(seconds, ssh, user):
         usage = main.get_usage(user, computer, ssh)
-        return {'result': "success", "time_left": usage['time_left'], "time_spent": usage['time_spent']}, 200 # nur return usage, 200 ?
+        return usage, 200
     else:
         return {'result': "fail"}, 500
 
@@ -51,7 +51,7 @@ def decrease_time(computer, user, seconds):
     ssh = main.get_connection(computer)
     if main.decrease_time(seconds, ssh, user):
         usage = main.get_usage(user, computer, ssh)
-        return {'result': "success", "time_left": usage['time_left'], "time_spent": usage['time_spent']}, 200 # nur return usage, 200 ?
+        return usage, 200
     else:
         return {'result': "fail"}, 500
 
