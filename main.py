@@ -70,12 +70,11 @@ def get_usage(user, computer, ssh):
     # Search if section exists
     if config.has_section(section_name):
         # Extract values
-        timestamp = config.get(section_name, 'TIMESTAMP', fallback=0)
         time_left = config.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
         time_spent = config.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
         
         # Gib die Werte als Dictionary zurück
-        return {'time_left': time_left, 'time_spent': time_spent,'timestamp': timestamp, 'result': 'success'}
+        return {'time_left': time_left, 'time_spent': time_spent, 'result': 'success'}
 
 #    search = r"(TIME_LEFT_DAY: )([0-9]+)"
 #    time_left = re.search(search, timekpra_userinfo_output)
@@ -123,11 +122,11 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
             config.set(section_name, key, value)
         else:
             # Handle lines without ": "
-            print(f"Skipping line without ': ': {line}")
+            print(f"{__file__} {__name__}: Skipping line without ': ': {line}")
 
     with open('database.ini', 'w') as config_file:
         config.write(config_file)
-        print("INI file successfully updated.")
+        print(f"{__file__} {__name__}: INI file successfully updated.")
 
 
 def get_connection(computer):
