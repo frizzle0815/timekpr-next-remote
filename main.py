@@ -74,12 +74,17 @@ def get_usage(user, computer, ssh):
         timestamp = config.get(section_name, 'TIMESTAMP', fallback="Not found")
         time_left = config.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
         time_spent = config.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
+        week_spent = config.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
+        week_limit = config.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
+        week_left = week_limit - week_spent
         
         # Gib die Werte als Dictionary zurück
         return {
+            'timestamp': timestamp,
             'time_left': time_left, 
             'time_spent': time_spent,
-            'timestamp': timestamp,
+            'week_left': week_left,
+            'week_spent': week_spent,
             'result': 'success'
         }
 
