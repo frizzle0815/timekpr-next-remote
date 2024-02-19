@@ -1,11 +1,11 @@
 import main
 import conf, re, os
+import configparser
 from fabric import Connection
 from paramiko.ssh_exception import AuthenticationException
 from flask import Flask, render_template, request, send_from_directory, redirect
 
 app = Flask(__name__)
-
 
 def validate_request(computer, user):
     if computer not in conf.trackme:
@@ -27,7 +27,9 @@ def get_usage(computer, user):
         return validate_request(computer, user), 500
     ssh = main.get_connection(computer)
     usage = main.get_usage(user, computer, ssh)
-    return {'result': usage['result'], "time_left": usage['time_left'], "time_spent": usage['time_spent']}, 200
+    ### Debug
+    print(usage)
+    return {'result': usage['result'], "time_left": usage['time_left'], "time_spent": usage['time_spent'], "timestamp": usage['timestamp']}, 200
 
 
 @app.route("/increase_time/<computer>/<user>/<seconds>")
@@ -65,12 +67,12 @@ def update_config(option):
     current_value = main.config.getboolean('Settings', option)
     new_value = not current_value
     main.config.set('Settings', option, str(new_value))
-    with open('user_config.ini', 'w') as config_file:
+    with open('database.ini', 'w') as config_file:
         main.config.write(config_file)
 
 @app.route('/')
 def index():
-    # Load with settings from user_config.ini
+    # Load with settings from database.ini
     option1_value = main.config.getboolean('Settings', 'Option1')
     option2_value = main.config.getboolean('Settings', 'Option2')
     option3_value = main.config.getboolean('Settings', 'Option3')

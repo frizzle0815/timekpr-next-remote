@@ -231,13 +231,15 @@
                 let rand_dom = '_' + uuidv4();
                 let times = get_times(rand_dom);
                 // todo - click doesn't work and radio spans accross users'
+
+                // Append user elements to the 'people' container
                 $("#people").append(
                     "<span class='user' id='" + user + rand_dom + "'>" +
                         "<p  class='h3'>" + user + "<span class='notify loading'></span></p>" +
                         "<span class='time_wrapper'>" +
                             "Unused: <span class='time time_left'>...</span> " +
-                            "Used: " +
-                                "<span class='time time_spent'>...</span>" +
+                            "Used: <span class='time time_spent'>...</span>" +
+                            "Timestamp: <span class='time timestamp'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
                             "<input type='radio'  class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
@@ -255,10 +257,12 @@
                     "</span>"
                 );
 
+                // Show loading message and disable buttons
                 $('#' + user  + rand_dom + " .notify").show().html("Loading...");
                 $('#' + user + rand_dom + ' .btn').addClass("disabled");
                 $('#' + user  + rand_dom + ' .btn-check').addClass("disabled");
 
+                // Set interval for loading animation
                 setInterval(function () {
                     $('#' + user  + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
                 }, 1400);
@@ -310,6 +314,7 @@
                         $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                     }, 1000);
                 });
+                $('#' + user + rand_dom + " .timestamp").html(timestamp);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
