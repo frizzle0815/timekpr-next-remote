@@ -42,7 +42,7 @@ def get_config():
 def get_usage(user, computer, ssh):
     # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
     global timekpra_userinfo_output
-    fail_json = {'time_left': 0, 'time_spent': 0, 'timestamp': 0, 'result': 'fail'}
+
     try:
         timekpra_userinfo_output = str(ssh.run(
                 conf.ssh_timekpra_bin + ' --userinfo ' + user,
@@ -55,14 +55,14 @@ def get_usage(user, computer, ssh):
     except NoValidConnectionsError as e:
         print(f"Cannot connect to SSH server on host '{computer}'. "
               f"Check address in conf.py or try again later.")
-        return fail_json
+        return {'result': 'fail'}
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
               f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
-        return fail_json
+        return {'result': 'fail'}
     except Exception as e:
         quit(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
-        return fail_json
+        return {'result': 'fail'}
 
     config = configparser.ConfigParser()
     config.read('database.ini')
