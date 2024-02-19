@@ -42,7 +42,7 @@ def get_config():
 def get_usage(user, computer, ssh):
     # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
     global timekpra_userinfo_output
-    fail_json = {'time_left': 0, 'time_spent': 0, 'result': 'fail'}
+    fail_json = {'time_left': 0, 'time_spent': 0, 'timestamp': 0, 'result': 'fail'}
     try:
         timekpra_userinfo_output = str(ssh.run(
                 conf.ssh_timekpra_bin + ' --userinfo ' + user,
@@ -71,11 +71,17 @@ def get_usage(user, computer, ssh):
     # Search if section exists
     if config.has_section(section_name):
         # Extract values
+        timestamp = config.get(section_name, 'TIMESTAMP', fallback="Not found")
         time_left = config.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
         time_spent = config.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
         
         # Gib die Werte als Dictionary zurück
-        return {'time_left': time_left, 'time_spent': time_spent, 'result': 'success'}
+        return {
+            'time_left': time_left, 
+            'time_spent': time_spent,
+            'timestamp': timestamp,
+            'result': 'success'
+        }
 
 #    search = r"(TIME_LEFT_DAY: )([0-9]+)"
 #    time_left = re.search(search, timekpra_userinfo_output)

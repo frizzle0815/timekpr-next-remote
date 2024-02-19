@@ -238,7 +238,8 @@
                         "<p  class='h3'>" + user + "<span class='notify loading'></span></p>" +
                         "<span class='time_wrapper'>" +
                             "Unused: <span class='time time_left'>...</span> " +
-                            "Used: <span class='time time_spent'>...</span>" +
+                            "Used: <span class='time time_spent'>...</span> " +
+                            "Timestamp: <span class='time timestamp'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
                             "<input type='radio'  class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
@@ -313,7 +314,7 @@
                         $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                     }, 1000);
                 });
-                //$('#' + user + rand_dom + " .timestamp").html(timestamp);
+                $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
