@@ -25,10 +25,10 @@ def get_usage(computer, user):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
     try:
-        ssh = main.get_connection(computer)
+        main.get_connection(computer, user) ## if connection successfull, update database.ini
     except Exception as e:
         print(f"SSH Error: {e}")
-    usage = main.get_usage(user, computer, ssh)
+    usage = main.get_usage(user, computer)
     ### Debug
     print(f"{__file__} {__name__}: {usage}")
     return usage, 200
@@ -65,6 +65,7 @@ def favicon():
 
 ## User Settings
 
+#ToDo: Änderung der Einstellungen überschreibt die ganze database.ini
 def update_settings(option):
     current_value = main.database.getboolean('Settings', option)
     new_value = not current_value

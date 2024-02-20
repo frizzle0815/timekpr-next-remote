@@ -38,18 +38,7 @@ database.read(database_path)
 def get_config():
     return conf.trackme
 
-def get_usage(user, computer, ssh):
-    # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
-    global timekpra_userinfo_output
-
-    timekpra_userinfo_output = str(ssh.run(
-            conf.ssh_timekpra_bin + ' --userinfo ' + user,
-            hide=True
-        ))
-
-        # Save to database.ini
-    save_to_ini(user, computer, timekpra_userinfo_output)
-
+def get_usage(user, computer):
     database = configparser.ConfigParser()
     database.read('database.ini')
     section_name = f'{user}_{computer}'
@@ -93,6 +82,12 @@ def get_usage(user, computer, ssh):
             'week_spent': week_spent,
             'result': 'success'
         }
+    else:
+        # Section not found, return error
+        return {
+            'result': "fail",
+            'error': f'Section {section_name} not found in database.ini'
+        }
 
 def save_to_ini(user, computer, timekpra_userinfo_output):
     database = configparser.ConfigParser()
@@ -129,20 +124,33 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
         print(f"{__file__} {__name__}: INI file successfully updated.")
 
 
-def get_connection(computer):
-    global connection
+def get_connection(computer, user):
+    global ssh
     # todo handle SSH keys instead of forcing it to be passsword only
     connect_kwargs = {
         'allow_agent': False,
         'look_for_keys': False,
-        "password": conf.ssh_password
+        'password': conf.ssh_password,
+        'timeout': 3
     }
     try:
-        connection = Connection(
+        ssh = Connection(
             host=computer,
             user=conf.ssh_user,
             connect_kwargs=connect_kwargs
         )
+
+        # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
+        global timekpra_userinfo_output
+
+        timekpra_userinfo_output = str(ssh.run(
+                conf.ssh_timekpra_bin + ' --userinfo ' + user,
+                hide=True
+            ))
+
+        # Save to database.ini
+        save_to_ini(user, computer, timekpra_userinfo_output)
+
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
               f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
@@ -151,11 +159,14 @@ def get_connection(computer):
         print(f"Cannot connect to SSH server on host '{computer}'. "
               f"Check address in conf.py or try again later.")
         raise e # handle exception in function that called this one
+    except socket.timeout:
+        print(f"Connection timed out on '{computer}'.")
+        raise e    
     except Exception as e:
         print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
         raise e # handle exception in function that called this one
     finally:
-        return connection
+        return ssh
 
 def adjust_time(up_down_string, seconds, ssh, user):
     command = conf.ssh_timekpra_bin + ' --settimeleft ' + user + ' ' + up_down_string + ' ' + str(seconds)
