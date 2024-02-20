@@ -1,50 +1,12 @@
 import main
 import conf, re, os
 import configparser
-import time
-import threading
-from main import get_config
-from main import get_connection
-from main import save_to_ini
-from main import config
-from main import get_database
-from main import get_usage
-from main import increase_time
-from main import decrease_time
 from fabric import Connection
 from paramiko.ssh_exception import AuthenticationException
 from paramiko.ssh_exception import NoValidConnectionsError
 from flask import Flask, render_template, request, send_from_directory, redirect
 
 app = Flask(__name__)
-
-def check_connection():
-  while True:
-    trackme_config = get_config()
-    
-    for computer, users in trackme_config.items():
-      for user in users:
-      
-        try:
-          ssh = get_connection(computer)
-        
-        except NoValidConnectionsError as e:
-          print(f"No connection to {computer}")
-          continue
-          
-        try:
-          timekpra_userinfo_output = str(ssh.run(
-                    conf.ssh_timekpra_bin + ' --userinfo ' + user,
-                    hide=True
-                ))
-          save_to_ini(user, computer, timekpra_userinfo_output)
-          
-        except:
-          print(f"Error getting data for user {user} on {computer}")
-          continue
-          
-      
-    time.sleep(30)
 
 def validate_request(computer, user):
     if computer not in conf.trackme:
@@ -64,10 +26,11 @@ def config():
 def get_usage(computer, user):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
+    ssh = main.get_connection(computer)   
     usage = get_usage(user, computer)
     ### Debug
     print(f"{__file__} {__name__}: {usage}")
-    return usage, 200
+    return {'result': usage['result'], "time_left": usage['time_left'], "time_spent": usage['time_spent']}, 200
 
 
 @app.route("/increase_time/<computer>/<user>/<seconds>")
@@ -77,7 +40,7 @@ def increase_time(computer, user, seconds):
     ssh = get_connection(computer)
     if increase_time(seconds, ssh, user):
         usage = get_usage(user, computer, ssh)
-        return usage, 200
+        return usage, 200 # nur return usage, 200 ?
     else:
         return {'result': "fail"}, 500
 
@@ -86,9 +49,9 @@ def increase_time(computer, user, seconds):
 def decrease_time(computer, user, seconds):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
-    ssh = get_connection(computer)
-    if decrease_time(seconds, ssh, user):
-        usage = get_usage(user, computer, ssh)
+    ssh = main.get_connection(computer)
+    if main.decrease_time(seconds, ssh, user):
+        usage = main.get_usage(user, computer, ssh)
         return usage, 200
     else:
         return {'result': "fail"}, 500
@@ -110,8 +73,6 @@ def update_config(option):
 
 @app.route('/')
 def index():
-    config = get_database()
-    print(f"Settings for index.html {config}")
     # Load with settings from database.ini
     option1_value = config.getboolean('Settings', 'option1')
     option2_value = config.getboolean('Settings', 'option2')
@@ -134,11 +95,5 @@ def update_config_route():
     else:
         return {'result': "error", 'message': "Option not provided"}, 400
 
-def main():
-    t = threading.Thread(target=check_connection)
-    t.daemon = True
-    t.start()
-    app.run(host="0.0.0.0", port=8080)
-
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=8080)
