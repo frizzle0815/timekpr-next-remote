@@ -237,10 +237,8 @@
                     "<span class='user' id='" + user + rand_dom + "'>" +
                         "<p  class='h3'>" + user + "<span class='notify loading'></span></p>" +
                         "<span class='time_wrapper'>" +
-                            "W Unused: <span class='time week_left'>...</span> " +
-                            "W Used: <span class='time week_spent'>...</span><br/>" +
                             "Unused: <span class='time time_left'>...</span> " +
-                            "Used: <span class='time time_spent'>...</span><br/>" +
+                            "Used: <span class='time time_spent'>...</span> " +
                             "Timestamp: <span class='time timestamp'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
@@ -319,8 +317,6 @@
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
-                $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
-                $('#' + user + rand_dom + " .week_spent").html(secondsToHms(usage.week_spent));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
                 $('#' + user + rand_dom + ' .btn').removeClass("disabled");
                 $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
