@@ -16,7 +16,6 @@ print = functools.partial(print, flush=True) # for debugging, print messages sho
 ## User Config Start
 
 config_path = 'database.ini'
-global config
 
 if not os.path.isfile(config_path):
     # Create default config if database.ini does not exist
