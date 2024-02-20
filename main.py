@@ -4,7 +4,6 @@
 import conf, re
 import configparser
 import json
-import json
 import os
 import functools # debug
 from fabric import Connection
@@ -17,14 +16,15 @@ print = functools.partial(print, flush=True) # for debugging, print messages sho
 ## User Config Start
 
 config_path = 'database.ini'
+global config
 
 if not os.path.isfile(config_path):
     # Create default config if database.ini does not exist
     default_config = configparser.ConfigParser()
     default_config['Settings'] = {
-        'Option1': 'False',
-        'Option2': 'True',
-        'Option3': 'False',
+        'option1': 'False',
+        'option2': 'True',
+        'option3': 'False',
     }
 
     with open(config_path, 'w') as config_file:
@@ -35,58 +35,39 @@ config.read(config_path)
 
 ## User Config End
 
+def get_database():
+    config = configparser.ConfigParser()
+    config.read('database.ini')
+    return config
+
 def get_config():
     return conf.trackme
 
 
-def get_usage(user, computer, ssh):
-    # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
-    global timekpra_userinfo_output
-
-    try:
-        timekpra_userinfo_output = str(ssh.run(
-                conf.ssh_timekpra_bin + ' --userinfo ' + user,
-                hide=True
-            ))
-
-        # Save to database.ini
-        save_to_ini(user, computer, timekpra_userinfo_output)
-
-    except NoValidConnectionsError as e:
-        print(f"Cannot connect to SSH server on host '{computer}'. "
-              f"Check address in conf.py or try again later.")
-        return {'result': 'fail'}
-    except AuthenticationException as e:
-        print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
-              f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
-        return {'result': 'fail'}
-    except Exception as e:
-        quit(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
-        return {'result': 'fail'}
-
+def get_usage(user, computer):
     config = configparser.ConfigParser()
     config.read('database.ini')
     section_name = f'{user}_{computer}'
     
     # Search if section exists
     if config.has_section(section_name):
-        # Extract values
-        timestamp = config.get(section_name, 'TIMESTAMP', fallback="Not found")
-        time_left = config.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
-        time_spent = config.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
-        week_spent = config.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
-        week_limit = config.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
-        week_left = week_limit - week_spent
+      # Extract values
+      timestamp = config.get(section_name, 'TIMESTAMP', fallback="Not found")
+      time_left = config.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
+      time_spent = config.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
+      week_spent = config.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
+      week_limit = config.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
+      week_left = week_limit - week_spent
         
-        # Gib die Werte als Dictionary zurück
-        return {
-            'timestamp': timestamp,
-            'time_left': time_left, 
-            'time_spent': time_spent,
-            'week_left': week_left,
-            'week_spent': week_spent,
-            'result': 'success'
-        }
+      # Gib die Werte als Dictionary zurück
+      return {
+        'timestamp': timestamp,
+        'time_left': time_left, 
+        'time_spent': time_spent,
+        'week_left': week_left,
+        'week_spent': week_spent,
+        'result': 'success'
+      }
 
 #    search = r"(TIME_LEFT_DAY: )([0-9]+)"
 #    time_left = re.search(search, timekpra_userinfo_output)
@@ -156,10 +137,16 @@ def get_connection(computer):
             connect_kwargs=connect_kwargs
         )
     except AuthenticationException as e:
-        quit(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
+        print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
               f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
+        raise e # handle exception in function that called this one
+    except NoValidConnectionsError as e:
+        print(f"Cannot connect to SSH server on host '{computer}'. "
+              f"Check address in conf.py or try again later.")
+        raise e # handle exception in function that called this one
     except Exception as e:
-        quit(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
+        print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
+        raise e # handle exception in function that called this one
     finally:
         return connection
 
