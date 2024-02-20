@@ -10,7 +10,7 @@ import functools # debug
 from fabric import Connection
 from paramiko.ssh_exception import AuthenticationException
 from paramiko.ssh_exception import NoValidConnectionsError
-from datetime import datetime
+from datetime import datetime, timedelta
 
 print = functools.partial(print, flush=True) # for debugging, print messages show up in docker logs
 
@@ -57,16 +57,36 @@ def get_usage(user, computer, ssh):
     # Search if section exists
     if database.has_section(section_name):
         # Extract values
-        timestamp = database.get(section_name, 'TIMESTAMP', fallback="Not found")
+        timestamp = database.get(section_name, 'TIMESTAMP', fallback=0)
         time_left = database.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
         time_spent = database.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
         week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
         week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
         week_left = week_limit - week_spent
         
-        # Gib die Werte als Dictionary zurück
+        # Calculate last_seen
+        timestamp_dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+        now = datetime.now()
+        time_since = now - timestamp_dt
+        seconds_ago = time_since.total_seconds() 
+
+        last_seen = ""
+        if seconds_ago < 60:
+            last_seen = f"{int(seconds_ago)} seconds ago"  
+        elif seconds_ago < 3600:
+            minutes = seconds_ago // 60
+            last_seen = f"{int(minutes)} minutes ago"
+        elif seconds_ago < 86400:
+            hours = seconds_ago // 3600
+            last_seen = f"{int(hours)} hours ago"
+        else:
+            days = seconds_ago // 86400
+            last_seen = f"{int(days)} days ago"
+        
+        # Give values to flask app
         return {
             'timestamp': timestamp,
+            'last_seen': last_seen,
             'time_left': time_left, 
             'time_spent': time_spent,
             'week_left': week_left,

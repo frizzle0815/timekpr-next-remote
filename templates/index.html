@@ -241,7 +241,8 @@
                             "W Used: <span class='time week_spent'>...</span><br/>" +
                             "Unused: <span class='time time_left'>...</span> " +
                             "Used: <span class='time time_spent'>...</span><br/>" +
-                            "Timestamp: <span class='time timestamp'>...</span>" +
+                            "Timestamp: <span class='time timestamp'>...</span> " +
+                            "Last seen: <span class='time last_seen'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
                             "<input type='radio'  class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
@@ -317,6 +318,7 @@
                     }, 1000);
                 });
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
+                $('#' + user + rand_dom + " .last_seen").html(usage.last_seen);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
