@@ -191,29 +191,14 @@
     <!-- Config Area -->
     <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
       <br>
-        <div class="form-check form-switch">
-          <form action="/update_settings" method="post">
-              <input class="form-check-input" type="checkbox" role="switch" id="Option1" name="Option1" {% if option1 %}checked{% endif %} onchange="updateSettings('Option1', this.form)">
-              <label class="form-check-label" for="Option1">Option 1</label>
-              <button type="submit" style="display: none;"></button>
-          </form>
-        </div>
-      
-        <div class="form-check form-switch">
-          <form action="/update_settings" method="post">
-              <input class="form-check-input" type="checkbox" role="switch" id="Option2" name="Option2" {% if option2 %}checked{% endif %} onchange="updateSettings('Option2', this.form)">
-              <label class="form-check-label" for="Option2">Option 2</label>
-              <button type="submit" style="display: none;"></button>
-          </form>
-        </div>
-      
-        <div class="form-check form-switch">
-          <form action="/update_settings" method="post">
-              <input class="form-check-input" type="checkbox" role="switch" id="Option3" name="Option3" {% if option3 %}checked{% endif %} onchange="updateSettings('Option3', this.form)">
-              <label class="form-check-label" for="Option3">Option 3</label>
-              <button type="submit" style="display: none;"></button>
-          </form>
-        </div>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="Option1" name="Option1" {% if database['Settings']['Option1'] == 'True' %}checked{% endif %} onchange="updateSetting('Option1', this.checked ? 'true' : 'false')">
+        <label class="form-check-label" for="Option1">Option 1</label>
+      </div>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="Option2" name="Option2" {% if database['Settings']['Option2'] == 'True' %}checked{% endif %} onchange="updateSetting('Option2', this.checked ? 'true' : 'false')">
+        <label class="form-check-label" for="Option2">Option 2</label>
+      </div>
     </div>
   </div>
 
@@ -415,14 +400,17 @@
         })
 
        // Update User Settings
-        function updateSettings(option, form) {
+       function updateSetting(option, value) {
           $.ajax({
-              type: "POST",
-              url: "/update_settings",
-              data: { option: option },
-              success: function(newSettings) {
-                console.log(newSettings);
-              }
+            url: '/update_settings',
+            type: 'POST',
+            data: { option: option, value: value.toString() }, // Konvertieren Sie den booleschen Wert in einen String
+            success: function(response) {
+              console.log('Einstellung aktualisiert: ', response);
+            },
+            error: function(error) {
+              console.error('Fehler beim Aktualisieren der Einstellung: ', error);
+            }
           });
         }
 

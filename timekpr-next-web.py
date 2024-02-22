@@ -4,7 +4,7 @@ import configparser
 import socket ## ssh error handling
 from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsError ## ssh error handling
 from fabric import Connection
-from flask import Flask, render_template, request, send_from_directory, redirect
+from flask import Flask, render_template, request, send_from_directory, redirect, jsonify
 
 ### threading
 import threading
@@ -111,39 +111,43 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
         'favicon.ico',mimetype='image/vnd.microsoft.icon')
 
-## User Settings
 
-#ToDo: Änderung der Einstellungen überschreibt die ganze database.ini
-def update_settings(option):
-    current_value = main.database.getboolean('Settings', option)
-    new_value = not current_value
-    main.database.set('Settings', option, str(new_value))
-    with open('database.ini', 'w') as database_file:
-        main.database.write(database_file)
+# Funktion zum Lesen der gesamten INI-Datei
+def read_database_ini():
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+    return database
+
+# Funktion zum Schreiben der gesamten INI-Datei
+def write_database_ini(database):
+    with open('database.ini', 'w') as configfile:
+        database.write(configfile)
 
 @app.route('/')
 def index():
-    # Load with settings from database.ini
-    option1_value = main.database.getboolean('Settings', 'Option1')
-    option2_value = main.database.getboolean('Settings', 'Option2')
-    option3_value = main.database.getboolean('Settings', 'Option3')
-    # Add more options as necessary
-    return render_template(
-        'index.html',
-        option1=option1_value,
-        option2=option2_value,
-        option3=option3_value
-        )
+    database_read = read_database_ini()
+    # Konvertieren Sie die Konfiguration in ein Dictionary für das Template
+    database = {section: dict(database_read[section]) for section in database_read.sections()}
+    return render_template('index.html', database=database)
 
 @app.route('/update_settings', methods=['POST'])
-def update_settings_route():
+def update_settings():
+    print('Received form data:', request.form)
     option = request.form.get('option')
-    if option:
-        print(f"Updating {option}")
-        update_settings(option)
-        return {'result': "success"}, 200
-    else:
-        return {'result': "error", 'message': "Option not provided"}, 400
+    value = request.form.get('value')
+    
+    if not option or value is None:
+        print('Missing data in request!')
+        return "Missing data", 400
+
+    print(f'Updating option {option} to {value}')
+    value = value.lower() == 'true'
+    database = read_database_ini()
+    database.set('Settings', option, str(value))
+    write_database_ini(database)
+    
+    return jsonify({option: value})
+
 
 #### threading
 
