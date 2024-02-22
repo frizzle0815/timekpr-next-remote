@@ -4,7 +4,44 @@ import configparser
 from fabric import Connection
 from flask import Flask, render_template, request, send_from_directory, redirect
 
+### threading
+import threading
+import time
+from paramiko.ssh_exception import NoValidConnectionsError
+### threading
+
+
 app = Flask(__name__)
+
+#### threading
+def check_connection():
+  while True:
+    trackme_config = main.get_config()
+    
+    for computer, users in trackme_config.items():
+      for user in users:
+      
+        try:
+          ssh = main.get_connection(computer)
+        
+        except NoValidConnectionsError as e:
+          print(f"No connection to {computer}")
+          continue
+          
+        try:
+          timekpra_userinfo_output = str(ssh.run(
+                    conf.ssh_timekpra_bin + ' --userinfo ' + user,
+                    hide=True
+                ))
+          main.save_to_ini(user, computer, timekpra_userinfo_output)
+          
+        except:
+          print(f"Error getting data for user {user} on {computer}")
+          continue
+
+    time.sleep(30)
+#### threading
+
 
 def validate_request(computer, user):
     if computer not in conf.trackme:
@@ -25,10 +62,10 @@ def get_usage(computer, user):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
     try:
-        main.get_connection(computer, user) ## if connection successfull, update database.ini
+        main.get_connection(computer) ## if connection successfull, update database.ini
     except Exception as e:
         print(f"SSH Error: {e}")
-    usage = main.get_usage(user, computer)
+    usage = main.get_usage(user, computer)  ## if no connection, use saved data
     ### Debug
     print(f"{__file__} {__name__}: {usage}")
     return usage, 200
@@ -38,7 +75,7 @@ def get_usage(computer, user):
 def increase_time(computer, user, seconds):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
-    ssh = main.get_connection(computer, user)
+    ssh = main.get_connection(computer)
     if main.increase_time(seconds, ssh, user):
         usage = main.get_usage(user, computer, ssh)
         return usage, 200
@@ -50,7 +87,7 @@ def increase_time(computer, user, seconds):
 def decrease_time(computer, user, seconds):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
-    ssh = main.get_connection(computer, user)
+    ssh = main.get_connection(computer)
     if main.decrease_time(seconds, ssh, user):
         usage = main.get_usage(user, computer, ssh)
         return usage, 200
@@ -97,5 +134,16 @@ def update_settings_route():
     else:
         return {'result': "error", 'message': "Option not provided"}, 400
 
-if __name__ == "__main__":
+#### threading
+
+def start_threading():
+    t = threading.Thread(target=check_connection)
+    t.daemon = True
+    t.start()
     app.run(host="0.0.0.0", port=8080)
+
+#### threading
+
+
+if __name__ == "__main__":
+    start_threading()

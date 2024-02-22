@@ -16,22 +16,55 @@ print = functools.partial(print, flush=True) # for debugging, print messages sho
 
 ## User Config Start
 
-database_path = 'database.ini'
+default_user_settings = {
+    'Option1': 'False',
+    'Option2': 'True',
+    'Option3': 'False',
+}
 
-if not os.path.isfile(database_path):
-    # Create default config if database.ini does not exist
-    default_settings = configparser.ConfigParser()
-    default_settings['Settings'] = {
-        'Option1': 'False',
-        'Option2': 'True',
-        'Option3': 'False',
-    }
+default_usage = {
+    'TIMESTAMP': '-1',
+    'LIMIT_PER_WEEK': '0',
+    'LIMIT_PER_MONTH': '0',
+    'TIME_SPENT_BALANCE': '0',
+    'TIME_SPENT_DAY': '0',
+    'TIME_SPENT_WEEK': '0',
+    'TIME_SPENT_MONTH': '0',
+    'TIME_LEFT_DAY': '0',
+    'PLAYTIME_LEFT_DAY': '0',
+    'PLAYTIME_SPENT_DAY': '0',
+    'ACTUAL_TIME_SPENT_SESSION': '0',
+    'ACTUAL_TIME_INACTIVE_SESSION': '0',
+    'ACTUAL_TIME_SPENT_BALANCE': '0',
+    'ACTUAL_TIME_SPENT_DAY': '0',
+    'ACTUAL_TIME_LEFT_DAY': '0',
+    'ACTUAL_TIME_LEFT_CONTINUOUS': '0',
+    'ACTUAL_PLAYTIME_LEFT_DAY': '0',
+    'ACTUAL_ACTIVE_PLAYTIME_ACTIVITY_COUNT': '0',
+}
 
-    with open(database_path, 'w') as database_file:
-        default_settings.write(database_file)
-
+# Initialize the configparser
 database = configparser.ConfigParser()
-database.read(database_path)
+
+# Set default values for all usage sections
+database['DEFAULT'] = default_usage
+
+# Check if the database.ini file exists
+if not os.path.isfile('database.ini'):
+    # Create the database.ini with default_user_settings if it does not exist
+    database['Settings'] = default_user_settings
+    with open('database.ini', 'w') as database_file:
+        database.write(database_file)
+else:
+    # If database.ini exists, load the existing settings
+    database.read('database.ini')
+    # Check if the 'Settings' section exists
+    if not database.has_section('Settings'):
+        # Add the 'Settings' section and fill it with default_user_settings
+        database['Settings'] = default_user_settings
+    # Write the updated settings back to the database.ini
+    with open('database.ini', 'w') as database_file:
+        database.write(database_file)
 
 ## User Config End
 
@@ -41,59 +74,71 @@ def get_config():
 def get_usage(user, computer):
     database = configparser.ConfigParser()
     database.read('database.ini')
-    section_name = f'{user}_{computer}'
+    section_name = f'{computer}_{user}'
     
-    # Search if section exists
-    if database.has_section(section_name):
-        # Extract values
-        timestamp = database.get(section_name, 'TIMESTAMP', fallback=0)
-        time_left = database.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
-        time_spent = database.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
-        week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
-        week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
-        week_left = week_limit - week_spent
-        
-        # Calculate last_seen
-        timestamp_dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
-        now = datetime.now()
-        time_since = now - timestamp_dt
-        seconds_ago = time_since.total_seconds() 
-
-        last_seen = ""
-        if seconds_ago < 60:
-            last_seen = f"{int(seconds_ago)} seconds ago"  
-        elif seconds_ago < 3600:
-            minutes = seconds_ago // 60
-            last_seen = f"{int(minutes)} minutes ago"
-        elif seconds_ago < 86400:
-            hours = seconds_ago // 3600
-            last_seen = f"{int(hours)} hours ago"
-        else:
-            days = seconds_ago // 86400
-            last_seen = f"{int(days)} days ago"
-        
-        # Give values to flask app
-        return {
-            'timestamp': timestamp,
-            'last_seen': last_seen,
-            'time_left': time_left, 
-            'time_spent': time_spent,
-            'week_left': week_left,
-            'week_spent': week_spent,
-            'result': 'success'
-        }
+    # Check if the section exists
+    if not database.has_section(section_name):
+        # If the section does not exist, inform the user and use default values
+        error_message = f"Section {section_name} not found in database.ini; using default values."
+        section_name = 'DEFAULT'  # Set to DEFAULT so it pulls the default values
+    
+    # Extract values using the DEFAULT section as fallback
+    timestamp = database.get(section_name, 'TIMESTAMP', fallback='Never')
+    time_left = database.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
+    time_spent = database.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
+    week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
+    week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
+    week_left = week_limit - week_spent
+    
+    # Calculate last_seen
+    last_seen = ""
+    if timestamp == "-1":
+        last_seen = "Never"
     else:
-        # Section not found, return error
-        return {
-            'result': "fail",
-            'error': f'Section {section_name} not found in database.ini'
-        }
+        # Calculate last_seen based on the timestamp
+        try:
+            timestamp_dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+            now = datetime.now()
+            time_since = now - timestamp_dt
+            seconds_ago = time_since.total_seconds()
+
+            if seconds_ago < 60:
+                last_seen = f"{int(seconds_ago)} seconds ago"
+            elif seconds_ago < 3600:
+                minutes = seconds_ago // 60
+                last_seen = f"{int(minutes)} minutes ago"
+            elif seconds_ago < 86400:
+                hours = seconds_ago // 3600
+                last_seen = f"{int(hours)} hours ago"
+            else:
+                days = seconds_ago // 86400
+                last_seen = f"{int(days)} days ago"
+        except ValueError:
+            # Handle the case where the timestamp format is incorrect
+            last_seen = "Timestamp format error"
+
+    # Prepare the result dictionary
+    result = {
+        'timestamp': timestamp,
+        'last_seen': last_seen,
+        'time_left': time_left, 
+        'time_spent': time_spent,
+        'week_left': week_left,
+        'week_spent': week_spent,
+        'result': 'success'
+    }
+
+    # Add the error message if the section was not found
+    if 'error_message' in locals():
+        result['error'] = error_message
+
+    return result
 
 def save_to_ini(user, computer, timekpra_userinfo_output):
     database = configparser.ConfigParser()
     database.read('database.ini')
 
-    section_name = f'{user}_{computer}'
+    section_name = f'{computer}_{user}'
     if not database.has_section(section_name):
         database.add_section(section_name)
         print(f"Section {section_name} has been added.")
@@ -124,8 +169,8 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
         print(f"{__file__} {__name__}: INI file successfully updated.")
 
 
-def get_connection(computer, user):
-    global ssh
+def get_connection(computer):
+    # global ssh ## thread problem if global ?!?
     # todo handle SSH keys instead of forcing it to be passsword only
     connect_kwargs = {
         'allow_agent': False,
@@ -141,15 +186,15 @@ def get_connection(computer, user):
         )
 
         # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
-        global timekpra_userinfo_output
+        # global timekpra_userinfo_output ## thread problem if global ?!?
 
-        timekpra_userinfo_output = str(ssh.run(
-                conf.ssh_timekpra_bin + ' --userinfo ' + user,
-                hide=True
-            ))
+        # timekpra_userinfo_output = str(ssh.run(
+        #         conf.ssh_timekpra_bin + ' --userinfo ' + user,
+        #         hide=True
+        #     ))
 
-        # Save to database.ini
-        save_to_ini(user, computer, timekpra_userinfo_output)
+        # # Save to database.ini
+        # save_to_ini(user, computer, timekpra_userinfo_output)
 
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
