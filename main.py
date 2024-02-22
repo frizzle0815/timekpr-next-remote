@@ -118,7 +118,7 @@ def get_usage(user, computer):
             last_seen = "Timestamp format error"
 
     # Prepare the result dictionary
-    result = {
+    usage = {
         'timestamp': timestamp,
         'last_seen': last_seen,
         'time_left': time_left, 
@@ -130,9 +130,9 @@ def get_usage(user, computer):
 
     # Add the error message if the section was not found
     if 'error_message' in locals():
-        result['error'] = error_message
+        usage['error'] = error_message
 
-    return result
+    return usage
 
 def save_to_ini(user, computer, timekpra_userinfo_output):
     database = configparser.ConfigParser()
@@ -161,12 +161,12 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
             # Set the key-value pair in the INI file
             database.set(section_name, key, value)
         else:
-            # Handle lines without ": "
-            print(f"{__file__} {__name__}: Skipping line without ': ': {line}")
+            # If a line without ": " is found, do nothing and continue
+            pass
 
     with open('database.ini', 'w') as database_file:
         database.write(database_file)
-        print(f"{__file__} {__name__}: INI file successfully updated.")
+        print(f"{__file__} {__name__}: SUCCESS: usage for {user} on {computer} updated.")
 
 
 def get_connection(computer):
@@ -184,17 +184,6 @@ def get_connection(computer):
             user=conf.ssh_user,
             connect_kwargs=connect_kwargs
         )
-
-        # to do - maybe check if user is in timekpr first? (/usr/bin/timekpra --userlist)
-        # global timekpra_userinfo_output ## thread problem if global ?!?
-
-        # timekpra_userinfo_output = str(ssh.run(
-        #         conf.ssh_timekpra_bin + ' --userinfo ' + user,
-        #         hide=True
-        #     ))
-
-        # # Save to database.ini
-        # save_to_ini(user, computer, timekpra_userinfo_output)
 
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "

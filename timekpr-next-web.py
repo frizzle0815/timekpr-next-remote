@@ -1,47 +1,35 @@
 import main
 import conf, re, os
 import configparser
+import socket ## ssh error handling
+from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsError ## ssh error handling
 from fabric import Connection
 from flask import Flask, render_template, request, send_from_directory, redirect
 
 ### threading
 import threading
 import time
-from paramiko.ssh_exception import NoValidConnectionsError
 ### threading
-
 
 app = Flask(__name__)
 
 #### threading
 def check_connection():
-  while True:
-    trackme_config = main.get_config()
-    
-    for computer, users in trackme_config.items():
-      for user in users:
-      
-        try:
-          ssh = main.get_connection(computer)
+    while True:
+        trackme_config = main.get_config()
         
-        except NoValidConnectionsError as e:
-          print(f"No connection to {computer}")
-          continue
-          
-        try:
-          timekpra_userinfo_output = str(ssh.run(
-                    conf.ssh_timekpra_bin + ' --userinfo ' + user,
-                    hide=True
-                ))
-          main.save_to_ini(user, computer, timekpra_userinfo_output)
-          
-        except:
-          print(f"Error getting data for user {user} on {computer}")
-          continue
+        for computer, users in trackme_config.items():
+            for user in users:
+                try:
+                    ssh = main.get_connection(computer)
+                except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+                    print(f"No connection to {computer}: {e}")
+                    continue
+                    
+                update_userinfo(computer, user)
 
-    time.sleep(30)
+        time.sleep(30)
 #### threading
-
 
 def validate_request(computer, user):
     if computer not in conf.trackme:
@@ -50,6 +38,27 @@ def validate_request(computer, user):
         return {'result': "fail", "message": "user not in computer in config"}
     else:
         return {'result': "success", "message": "valid user and computer"}
+
+def update_userinfo(computer, user):
+    try:
+        ssh = main.get_connection(computer)
+        timekpra_userinfo_output = str(ssh.run(
+            conf.ssh_timekpra_bin + ' --userinfo ' + user,
+            hide=True
+        ))
+        main.save_to_ini(user, computer, timekpra_userinfo_output)
+    except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+        error_message = str(e)
+        print(f"Failed to update userinfo for {user} on {computer}: {error_message}")
+        return {'result': "fail", 'message': error_message}
+    else:
+        print(f"Userinfo updated successfully for {user} on {computer}")
+        return {'result': "success", 'message': "Userinfo updated successfully"}
+
+def update_all_userinfo():
+    for computer, users in conf.trackme.items():
+        for user in users:
+            result = update_userinfo(computer, user)
 
 
 @app.route("/config")
@@ -77,7 +86,8 @@ def increase_time(computer, user, seconds):
         return validate_request(computer, user), 500
     ssh = main.get_connection(computer)
     if main.increase_time(seconds, ssh, user):
-        usage = main.get_usage(user, computer, ssh)
+        update_userinfo(computer, user)  # Aktualisiere die timekpra_userinfo_output
+        usage = main.get_usage(user, computer)
         return usage, 200
     else:
         return {'result': "fail"}, 500
@@ -89,7 +99,8 @@ def decrease_time(computer, user, seconds):
         return validate_request(computer, user), 500
     ssh = main.get_connection(computer)
     if main.decrease_time(seconds, ssh, user):
-        usage = main.get_usage(user, computer, ssh)
+        update_userinfo(computer, user)  # Aktualisiere die timekpra_userinfo_output
+        usage = main.get_usage(user, computer)
         return usage, 200
     else:
         return {'result': "fail"}, 500
