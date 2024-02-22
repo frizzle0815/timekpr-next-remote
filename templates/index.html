@@ -239,9 +239,14 @@
                         "<span class='time_wrapper'>" +
                             "W Unused: <span class='time week_left'>...</span> " +
                             "W Used: <span class='time week_spent'>...</span><br/>" +
+                            "<div class='progress'>" +
+                                "<div class='progress-bar overflow-visible week_spent' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_spent</div>" +
+                            "</div>" +
                             "Unused: <span class='time time_left'>...</span> " +
                             "Used: <span class='time time_spent'>...</span><br/>" +
-                            "Timestamp: <span class='time timestamp'>...</span> " +
+                            "<div class='progress'>" +
+                                "<div class='progress-bar overflow-visible time_spent' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_spent</div>" +
+                            "</div>" +
                             "Last seen: <span class='time last_seen'>...</span>" +
                         "</span><br/>" +
                         "<div class='btn-group' role='group' aria-label='Action'>" +
@@ -317,12 +322,31 @@
                         $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                     }, 1000);
                 });
+                var timeTotal = usage.time_spent + usage.time_left;
+                var weekTotal = usage.week_spent + usage.week_left;
+
+                // Berechnen Sie die Prozentwerte für die Progress Bars
+                var timeSpentPercent = (usage.time_left / timeTotal) * 100;
+                var weekSpentPercent = (usage.week_left / weekTotal) * 100;
+
+                // Aktualisieren Sie die Beschriftungen und den Fortschritt der Progress Bars
+                $('#' + user + rand_dom + " .progress-bar.time_spent")
+                    .css('width', timeSpentPercent + '%')
+                    .attr('aria-valuenow', timeSpentPercent)
+                    .html(secondsToHms(usage.time_spent) + ' (' + timeSpentPercent.toFixed(2) + '%)');
+
+                $('#' + user + rand_dom + " .progress-bar.week_spent")
+                    .css('width', weekSpentPercent + '%')
+                    .attr('aria-valuenow', weekSpentPercent)
+                    .html(secondsToHms(usage.week_spent) + ' (' + weekSpentPercent.toFixed(2) + '%)');
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .last_seen").html(usage.last_seen);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
                 $('#' + user + rand_dom + " .week_spent").html(secondsToHms(usage.week_spent));
+                $('#' + user + rand_dom + " .progress-bar.time_spent").html(secondsToHms(usage.time_left));
+                $('#' + user + rand_dom + " .progress-bar.week_spent").html(secondsToHms(usage.week_left));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
                 $('#' + user + rand_dom + ' .btn').removeClass("disabled");
                 $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
