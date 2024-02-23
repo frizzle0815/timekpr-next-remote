@@ -26,14 +26,15 @@ def check_connection():
         # Now the loop checks the event instead of the config file
         trackme_config = main.get_config()
         
-        for computer, users in trackme_config.items():
-            for user in users:
+        for computer, userArrays in trackme_config.items():
+            for users in userArrays: # more than one user on one device
+                user = users[0] # Use only first value in array = use user and ignore alias
                 try:
                     ssh = main.get_connection(computer)
                 except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
                     print(f"No connection to {computer}: {e}")
                     continue
-                    
+
                 update_userinfo(computer, user)
 
         time.sleep(30)  # Waiting time between checks
@@ -56,7 +57,8 @@ def stop_background_service():
 def validate_request(computer, user):
     if computer not in conf.trackme:
         return {'result': "fail", "message": "computer not in config"}
-    if user not in conf.trackme[computer]:
+    # Check if any sublist in the list for the computer contains the user
+    if not any(user in userArray for userArray in conf.trackme[computer]):
         return {'result': "fail", "message": "user not in computer in config"}
     else:
         return {'result': "success", "message": "valid user and computer"}
@@ -78,8 +80,9 @@ def update_userinfo(computer, user):
         return {'result': "success", 'message': "Userinfo updated successfully"}
 
 def update_all_userinfo():
-    for computer, users in conf.trackme.items():
-        for user in users:
+    for computer, userArrays in conf.trackme.items():
+        for users in userArrays:
+            user = users[0]  # Use only first value in array = use user and ignore alias
             result = update_userinfo(computer, user)
 
 
@@ -102,12 +105,35 @@ def get_usage(computer, user):
     return usage, 200
 
 
+### New save time changes to database.ini
+
+@app.route("/queue_time_change", methods=['POST'])
+def queue_time_change():
+    try:
+        data = request.form
+        user = data['user']
+        computer = data['computer']
+        action = data['action']
+        seconds = data['seconds']
+        status = data['status']
+        
+        # Save to database.ini with status 'pending'
+        main.queue_time_change(user, computer, action, seconds, status)
+        return {'result': "queued"}, 200
+    except Exception as e:
+        print("Error processing request:", e)
+        # Hier können Sie eine detailliertere Fehlermeldung zurückgeben
+        return {'error': str(e)}, 400
+
+### New save time changes to database.ini
+
+
 @app.route("/increase_time/<computer>/<user>/<seconds>")
 def increase_time(computer, user, seconds):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
     ssh = main.get_connection(computer)
-    if main.increase_time(seconds, ssh, user):
+    if main.increase_time(seconds, ssh, user): # Call inscrease_time
         update_userinfo(computer, user)  # Aktualisiere die timekpra_userinfo_output
         usage = main.get_usage(user, computer)
         return usage, 200
@@ -120,7 +146,7 @@ def decrease_time(computer, user, seconds):
     if validate_request(computer, user)['result'] == "fail":
         return validate_request(computer, user), 500
     ssh = main.get_connection(computer)
-    if main.decrease_time(seconds, ssh, user):
+    if main.decrease_time(seconds, ssh, user): # Call decrease_time
         update_userinfo(computer, user)  # Aktualisiere die timekpra_userinfo_output
         usage = main.get_usage(user, computer)
         return usage, 200

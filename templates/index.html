@@ -188,6 +188,7 @@
     <!-- Main Area -->
     <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
       <br>
+      <div id='messageDisplay'></div> <!-- Status Message -->
       <div id="people"></div> <!-- Populated by script -->
     </div>
 
@@ -255,55 +256,59 @@
     <script src="{{ url_for('static', filename='jquery-3.6.3.min.js') }}"></script>
     <script>
         $.getJSON( "/config", function( data ) {
-            $.each( data, function( computer, user ) {
-                let rand_dom = '_' + uuidv4();
-                let times = get_times(rand_dom);
-                // todo - click doesn't work and radio spans accross users'
+            $.each( data, function( computer, userArrays ) {
+                $.each(userArrays, function(index, userArray) {
+                    let rand_dom = '_' + uuidv4();
+                    let user = userArray[0];
+                    let display_name = userArray[1];
+                    let times = get_times(rand_dom);
+                    // todo - click doesn't work and radio spans accross users'
 
-                // Append user elements to the 'people' container
-                $("#people").append(
-                    "<span class='user' id='" + user + rand_dom + "'>" +
-                        "<p  class='h3'>" + user + "<span class='notify loading'></span></p>" +
-                        "<span class='time_wrapper'>" +
-                            "W Unused: <span class='time week_left'>...</span> " +
-                            "W Used: <span class='time week_spent'>...</span><br/>" +
-                            "<div class='progress'>" +
-                                "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
+                    // Append user elements to the 'people' container
+                    $("#people").append(
+                        "<span class='user' id='" + user + rand_dom + "'>" +
+                            "<p  class='h3'>" + display_name + " [" + user + "]<span class='notify loading'></span></p>" +
+                            "<span class='time_wrapper'>" +
+                                "W Unused: <span class='time week_left'>...</span> " +
+                                "W Used: <span class='time week_spent'>...</span><br/>" +
+                                "<div class='progress'>" +
+                                    "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
+                                "</div>" +
+                                "Unused: <span class='time time_left'>...</span> " +
+                                "Used: <span class='time time_spent'>...</span><br/>" +
+                                "<div class='progress'>" +
+                                    "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
+                                "</div>" +
+                                "Last seen: <span class='time last_seen'>...</span>" +
+                            "</span><br/>" +
+                            "<div class='btn-group' role='group' aria-label='Action'>" +
+                                "<input type='radio'  class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
+                                "<label  class='btn btn-outline-primary' for='add" + rand_dom + "'>Add</label>" +
+                                "<input type='radio'  class='btn-check' id='remove" + rand_dom + "' value='remove' name='action' />" +
+                                "<label  class='btn btn-outline-primary' for='remove" + rand_dom + "'>Remove</label> " +
+                            "</div> " +
+                            "<div class='btn-group' role='group' aria-label='Times'>" +
+                                times +
                             "</div>" +
-                            "Unused: <span class='time time_left'>...</span> " +
-                            "Used: <span class='time time_spent'>...</span><br/>" +
-                            "<div class='progress'>" +
-                                "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
-                            "</div>" +
-                            "Last seen: <span class='time last_seen'>...</span>" +
-                        "</span><br/>" +
-                        "<div class='btn-group' role='group' aria-label='Action'>" +
-                            "<input type='radio'  class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
-                            "<label  class='btn btn-outline-primary' for='add" + rand_dom + "'>Add</label>" +
-                            "<input type='radio'  class='btn-check' id='remove" + rand_dom + "' value='remove' name='action' />" +
-                            "<label  class='btn btn-outline-primary' for='remove" + rand_dom + "'>Remove</label> " +
-                        "</div> " +
-                        "<div class='btn-group' role='group' aria-label='Times'>" +
-                            times +
-                        "</div>" +
-                        "<div class='btn-group' role='group' aria-label='save'>" +
-                            "<button class='btn btn-outline-primary save_me' " +
-                                "value='save' user='" + user + "' computer='" + computer + "' >Save</button>" +
-                        "</div> " +
-                    "</span>"
-                );
+                            "<div class='btn-group' role='group' aria-label='save'>" +
+                                "<button class='btn btn-outline-primary save_me' " +
+                                    "value='save' user='" + user + "' computer='" + computer + "' >Save</button>" +
+                            "</div> " +
+                        "</span>"
+                    );
 
-                // Show loading message and disable buttons
-                $('#' + user  + rand_dom + " .notify").show().html("Loading...");
-                $('#' + user + rand_dom + ' .btn').addClass("disabled");
-                $('#' + user  + rand_dom + ' .btn-check').addClass("disabled");
+                    // Show loading message and disable buttons
+                    $('#' + user  + rand_dom + " .notify").show().html("Loading...");
+                    $('#' + user + rand_dom + ' .btn').addClass("disabled");
+                    $('#' + user  + rand_dom + ' .btn-check').addClass("disabled");
 
-                // Set interval for loading animation
-                setInterval(function () {
-                    $('#' + user  + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
-                }, 1400);
-                $.getJSON( "/get_usage/" + computer + "/" + user, function( usage ) {
-                    render_user_to_dom(user, computer, usage, rand_dom);
+                    // Set interval for loading animation
+                    setInterval(function () {
+                        $('#' + user  + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
+                    }, 1400);
+                    $.getJSON( "/get_usage/" + computer + "/" + user, function( usage ) {
+                        render_user_to_dom(user, computer, usage, rand_dom);
+                    });
                 });
             });
         });
@@ -329,6 +334,7 @@
                 const computer = $( this ).attr('computer');
                 const action = $( '#' + user + rand_dom + ' input[name="action"]:checked').val();
                 const seconds = $( '#' + user + rand_dom + ' input[name="seconds"]:checked').val();
+                console.log("Attempting to save: ", {user, computer, action, seconds}); // Debug
                 if(action !== undefined && seconds !== undefined){
                     $('input').prop('checked', false);
                     add_or_remove_time(user, computer, action, seconds, rand_dom);
@@ -389,17 +395,35 @@
 
         }
 
-        function add_or_remove_time(user, computer, action, seconds, rand_dom){
-            let form;
-            if(action === 'add'){
-                form = 'increase_time'
-            } else {
-                form = 'decrease_time'
-            }
-            $.getJSON("/" + form + "/" + computer + "/" + user + "/" + seconds, function( data ) {
-                $('#' + user + rand_dom + " .time_left").html(secondsToHms(data.time_left));
-                $('#' + user + rand_dom + " .time_spent").html(secondsToHms(data.time_spent));
+        function add_or_remove_time(user, computer, action, seconds){
+            const data = {
+                'user': user,
+                'computer': computer,
+                'action': action,
+                'seconds': seconds,
+                'status': 'pending'
+            };
+            $.ajax({
+                url: '/queue_time_change',
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    // Handle success
+                    displayMessage('Time change queued: ' + response.result);
+                },
+                error: function(error) {
+                    // Handle error
+                    displayMessage('Error queuing time change: ' + error.responseText);
+                }
             });
+
+            // Display the variables that were sent
+            displayMessage('Variables sent: User=' + user + ', Computer=' + computer + ', Action=' + action + ', Seconds=' + seconds);
+        }
+
+        function displayMessage(message) {
+            // Update the page with the message
+            $('#messageDisplay').text(message);
         }
 
         // thanks https://stackoverflow.com/a/37096512 !

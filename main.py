@@ -202,6 +202,27 @@ def get_connection(computer):
     finally:
         return ssh
 
+def queue_time_change(user, computer, action, seconds, status):
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+
+    # Create a unique key for the change request
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    change_key = f"{computer}_{user}_{timestamp}"
+
+    # Check if a section for Time Changes exists, if not create it
+    if 'time_changes' not in database.sections():
+        database.add_section('time_changes')
+
+    # Add the change request to the section with status 'pending'
+    database.set('time_changes', change_key, f"{action},{seconds},{status}")
+
+    # Write the changes back to database.ini file
+    with open('database.ini', 'w') as configfile:
+        database.write(configfile)
+
+    print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds")
+
 def adjust_time(up_down_string, seconds, ssh, user):
     command = conf.ssh_timekpra_bin + ' --settimeleft ' + user + ' ' + up_down_string + ' ' + str(seconds)
     ssh.run(command)
