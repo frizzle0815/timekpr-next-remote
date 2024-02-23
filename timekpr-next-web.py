@@ -27,15 +27,18 @@ def check_connection():
         trackme_config = main.get_config()
         
         for computer, userArrays in trackme_config.items():
-            for users in userArrays: # more than one user on one device
-                user = users[0] # Use only first value in array = use user and ignore alias
+            for users in userArrays:  # More than one user on one device
+                user = users[0]  # Use only first value in array = use user and ignore alias
+                ssh = None
                 try:
                     ssh = main.get_connection(computer)
                 except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
                     print(f"No connection to {computer}: {e}")
-                    continue
-
-                update_userinfo(computer, user)
+                finally:
+                    if ssh:
+                        update_userinfo(ssh, computer, user)
+                        main.process_pending_time_changes(ssh, computer)
+                        ssh.close()  # Ensure the connection is closed after each attempt
 
         time.sleep(30)  # Waiting time between checks
 
@@ -63,9 +66,8 @@ def validate_request(computer, user):
     else:
         return {'result': "success", "message": "valid user and computer"}
 
-def update_userinfo(computer, user):
+def update_userinfo(ssh, computer, user):
     try:
-        ssh = main.get_connection(computer)
         timekpra_userinfo_output = str(ssh.run(
             conf.ssh_timekpra_bin + ' --userinfo ' + user,
             hide=True
@@ -83,8 +85,16 @@ def update_all_userinfo():
     for computer, userArrays in conf.trackme.items():
         for users in userArrays:
             user = users[0]  # Use only first value in array = use user and ignore alias
-            result = update_userinfo(computer, user)
-
+            ssh = None
+            try:
+                ssh = main.get_connection(computer)
+                result = update_userinfo(ssh, computer, user)
+                # Handle the result if necessary
+            except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+                print(f"Failed to update info for {user} on {computer}: {e}")
+            finally:
+                if ssh:
+                    ssh.close()  # Ensure the SSH connection is closed
 
 @app.route("/config")
 def config():
