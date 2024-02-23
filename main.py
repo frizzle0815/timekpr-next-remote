@@ -18,8 +18,8 @@ print = functools.partial(print, flush=True) # for debugging, print messages sho
 
 default_user_settings = {
     'background_service': 'false',
-    'Option2': 'true',
-    'Option3': 'false',
+    'option2': 'true',
+    'option3': 'false',
 }
 
 default_usage = {
@@ -52,16 +52,16 @@ database['DEFAULT_USAGE'] = default_usage
 # Check if the database.ini file exists
 if not os.path.isfile('database.ini'):
     # Create the database.ini with default_user_settings if it does not exist
-    database['Settings'] = default_user_settings
+    database['settings'] = default_user_settings
     with open('database.ini', 'w') as database_file:
         database.write(database_file)
 else:
     # If database.ini exists, load the existing settings
     database.read('database.ini')
-    # Check if the 'Settings' section exists
-    if not database.has_section('Settings'):
-        # Add the 'Settings' section and fill it with default_user_settings
-        database['Settings'] = default_user_settings
+    # Check if the 'settings' section exists
+    if not database.has_section('settings'):
+        # Add the 'settings' section and fill it with default_user_settings
+        database['settings'] = default_user_settings
     # Write the updated settings back to the database.ini
     with open('database.ini', 'w') as database_file:
         database.write(database_file)

@@ -188,12 +188,6 @@
     <!-- Main Area -->
     <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
       <br>
-      <div>
-          Background Service Status: 
-          <span id="status-background_service">
-              {{ database['settings']['background_service'] }}
-          </span>
-      </div>
       <div id="people"></div> <!-- Populated by script -->
     </div>
 
@@ -246,7 +240,14 @@
 
   <!-- Footer  Area -->
   <hr />
-  <label class="btn btn-outline-primary" id="toggle_theme">Toggle Theme</label>
+  <div>
+    <label class="btn btn-outline-primary" id="toggle_theme">Toggle Theme</label>
+    Background Service Status: 
+    <span id="status-background_service">
+        {{ database['settings']['background_service'] }}
+    </span>
+  </div>
+  
 </div>
 
   <!-- Script  Area -->
@@ -267,12 +268,12 @@
                             "W Unused: <span class='time week_left'>...</span> " +
                             "W Used: <span class='time week_spent'>...</span><br/>" +
                             "<div class='progress'>" +
-                                "<div class='progress-bar overflow-visible week_spent' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_spent</div>" +
+                                "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
                             "</div>" +
                             "Unused: <span class='time time_left'>...</span> " +
                             "Used: <span class='time time_spent'>...</span><br/>" +
                             "<div class='progress'>" +
-                                "<div class='progress-bar overflow-visible time_spent' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_spent</div>" +
+                                "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
                             "</div>" +
                             "Last seen: <span class='time last_seen'>...</span>" +
                         "</span><br/>" +
@@ -357,12 +358,12 @@
                 var weekSpentPercent = (usage.week_left / weekTotal) * 100;
 
                 // Aktualisieren Sie die Beschriftungen und den Fortschritt der Progress Bars
-                $('#' + user + rand_dom + " .progress-bar.time_spent")
+                $('#' + user + rand_dom + " .progress-bar.time_left")
                     .css('width', timeSpentPercent + '%')
                     .attr('aria-valuenow', timeSpentPercent)
                     .html(secondsToHms(usage.time_spent) + ' (' + timeSpentPercent.toFixed(2) + '%)');
 
-                $('#' + user + rand_dom + " .progress-bar.week_spent")
+                $('#' + user + rand_dom + " .progress-bar.week_left")
                     .css('width', weekSpentPercent + '%')
                     .attr('aria-valuenow', weekSpentPercent)
                     .html(secondsToHms(usage.week_spent) + ' (' + weekSpentPercent.toFixed(2) + '%)');
@@ -372,8 +373,8 @@
                 $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
                 $('#' + user + rand_dom + " .week_spent").html(secondsToHms(usage.week_spent));
-                $('#' + user + rand_dom + " .progress-bar.time_spent").html(secondsToHms(usage.time_left));
-                $('#' + user + rand_dom + " .progress-bar.week_spent").html(secondsToHms(usage.week_left));
+                $('#' + user + rand_dom + " .progress-bar.time_left").html(secondsToHms(usage.time_left));
+                $('#' + user + rand_dom + " .progress-bar.week_left").html(secondsToHms(usage.week_left));
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
                 $('#' + user + rand_dom + ' .btn').removeClass("disabled");
                 $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
@@ -435,6 +436,7 @@
           toggleTheme();
         }
 
+        // Activate Tab Menu
         // Activate Tab Menu
         $('#myTab a').on('click', function (e) {
           e.preventDefault()

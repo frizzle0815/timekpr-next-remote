@@ -166,7 +166,7 @@ def update_settings():
     database = configparser.ConfigParser()
     database.read('database.ini')
     # Set the new value for the specified option
-    database.set('Settings', option, value)
+    database.set('settings', option, value)
 
     # Write the updated configuration back to the file
     with open('database.ini', 'w') as configfile:
