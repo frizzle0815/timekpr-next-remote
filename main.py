@@ -1,20 +1,24 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-import conf, re
-import configparser
-import json
-import json
-import os
-import functools # debug
-from fabric import Connection
-from paramiko.ssh_exception import AuthenticationException
-from paramiko.ssh_exception import NoValidConnectionsError
-from datetime import datetime, timedelta
+import conf  # Used for accessing configuration variables like `conf.trackme`, `conf.ssh_password`, etc.
+import configparser  # Used for reading and writing the 'database.ini' file
+import os  # Used to check if the 'database.ini' file exists with os.path.isfile
+import re  # If you are using regular expressions in your code
+import functools  # Used to override the print function for flushing output
+from fabric import Connection  # Used to establish SSH connections
+from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsError  # Used to handle SSH connection exceptions
+from datetime import datetime, timedelta  # Used to handle timestamps and time calculations
+import threading  # Used to create and manage threading events and threads
+import time  # Used to create sleep delays in threads
+import socket  # Used to handle socket.timeout exception which can occur during SSH connection
 
 print = functools.partial(print, flush=True) # for debugging, print messages show up in docker logs
 
-## User Config Start
+# Create a threading event that can be set or cleared to control the loop
+background_service_event = threading.Event()
+
+##### Initializing Start #####
 
 default_user_settings = {
     'background_service': 'false',
@@ -66,10 +70,154 @@ else:
     with open('database.ini', 'w') as database_file:
         database.write(database_file)
 
-## User Config End
+##### Initializing End #####
+
+##### Background Service Start #####
+
+def check_connection():
+    while background_service_event.is_set():
+        config = configparser.ConfigParser()
+        config.read('database.ini')
+        
+        trackme_config = get_config()
+        
+        for computer, userArrays in trackme_config.items():
+            for users in userArrays:  # More than one user on one device
+                user = users[0]  # Use only first value in array = use user and ignore display_name
+                ssh = None
+                try:
+                    ssh = get_connection(computer)
+                except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+                    print(f"No connection to {computer}: {e}")
+                finally:
+                    if ssh:
+                        update_userinfo(ssh, computer, user)
+                        process_pending_time_changes(ssh, computer)
+                        ssh.close()  # Ensure the connection is closed after each attempt
+
+        time.sleep(30)  # Waiting time between checks
+
+def start_background_service():
+    if not background_service_event.is_set():
+        background_service_event.set()
+        t = threading.Thread(target=check_connection)
+        t.daemon = True
+        t.start()
+        print("Background service started.")
+
+def stop_background_service():
+    if background_service_event.is_set():
+        background_service_event.clear()
+        print("Background service stopped.")
+
+##### Background Service End #####
+
+##### Update Timekpr Userinfo Start ##### 
 
 def get_config():
     return conf.trackme
+
+def get_connection(computer):
+
+    # todo handle SSH keys instead of forcing it to be passsword only
+    connect_kwargs = {
+        'allow_agent': False,
+        'look_for_keys': False,
+        'password': conf.ssh_password,
+        'timeout': 3
+    }
+    try:
+        ssh = Connection(
+            host=computer,
+            user=conf.ssh_user,
+            connect_kwargs=connect_kwargs
+        )
+
+    except AuthenticationException as e:
+        print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
+              f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
+        raise e # handle exception in function that called this one
+    except NoValidConnectionsError as e:
+        print(f"Cannot connect to SSH server on host '{computer}'. "
+              f"Check address in conf.py or try again later.")
+        raise e # handle exception in function that called this one
+    except socket.timeout:
+        print(f"Connection timed out on '{computer}'.")
+        raise e    
+    except Exception as e:
+        print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
+        raise e # handle exception in function that called this one
+    finally:
+        return ssh
+
+def update_userinfo(ssh, computer, user):
+    try:
+        timekpra_userinfo_output = str(ssh.run(
+            conf.ssh_timekpra_bin + ' --userinfo ' + user,
+            hide=True
+        ))
+        save_to_ini(user, computer, timekpra_userinfo_output)
+    except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+        error_message = str(e)
+        print(f"Failed to update userinfo for {user} on {computer}: {error_message}")
+        return {'result': "fail", 'message': error_message}
+    else:
+        print(f"Userinfo updated successfully for {user} on {computer}")
+        return {'result': "success", 'message': "Userinfo updated successfully"}
+
+def update_all_userinfo():
+    #### For update without background service #####
+    for computer, userArrays in conf.trackme.items():
+        for users in userArrays:
+            user = users[0]  # Use only first value in array = use user and ignore alias
+            ssh = None
+            try:
+                ssh = get_connection(computer)
+                result = update_userinfo(ssh, computer, user)
+                # Handle the result if necessary
+            except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
+                print(f"Failed to update info for {user} on {computer}: {e}")
+            finally:
+                if ssh:
+                    ssh.close()  # Ensure the SSH connection is closed
+
+def save_to_ini(user, computer, timekpra_userinfo_output):
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+
+    section_name = f'{computer}_{user}'
+    if not database.has_section(section_name):
+        database.add_section(section_name)
+        print(f"Section {section_name} has been added.")
+
+    # Add current Timestamp
+    timestamp_key = 'TIMESTAMP'
+    timestamp_value = str(datetime.now())
+    database.set(section_name, timestamp_key, timestamp_value)
+
+    # Split the timekpra_userinfo_output string into lines and process each line
+    for line in timekpra_userinfo_output.split('\n'):
+        # Skip empty lines
+        if not line.strip():
+            continue
+
+        # Split each line into key and value using ": "
+        line_parts = line.split(': ', 1)
+        if len(line_parts) == 2:
+            key, value = map(str.strip, line_parts)
+            # Set the key-value pair in the INI file
+            database.set(section_name, key, value)
+        else:
+            # If a line without ": " is found, do nothing and continue
+            pass
+
+    with open('database.ini', 'w') as database_file:
+        database.write(database_file)
+        print(f"{__file__} {__name__}: SUCCESS: usage for {user} on {computer} updated.")
+
+##### Update Timekpr Userinfo End ##### 
+
+##### Update Web Frontend Start ##### 
 
 def get_usage(user, computer):
     database = configparser.ConfigParser()
@@ -134,73 +282,9 @@ def get_usage(user, computer):
 
     return usage
 
-def save_to_ini(user, computer, timekpra_userinfo_output):
-    database = configparser.ConfigParser()
-    database.read('database.ini')
+##### Update Web Frontend End ##### 
 
-    section_name = f'{computer}_{user}'
-    if not database.has_section(section_name):
-        database.add_section(section_name)
-        print(f"Section {section_name} has been added.")
-
-    # Add current Timestamp
-    timestamp_key = 'TIMESTAMP'
-    timestamp_value = str(datetime.now())
-    database.set(section_name, timestamp_key, timestamp_value)
-
-    # Split the timekpra_userinfo_output string into lines and process each line
-    for line in timekpra_userinfo_output.split('\n'):
-        # Skip empty lines
-        if not line.strip():
-            continue
-
-        # Split each line into key and value using ": "
-        line_parts = line.split(': ', 1)
-        if len(line_parts) == 2:
-            key, value = map(str.strip, line_parts)
-            # Set the key-value pair in the INI file
-            database.set(section_name, key, value)
-        else:
-            # If a line without ": " is found, do nothing and continue
-            pass
-
-    with open('database.ini', 'w') as database_file:
-        database.write(database_file)
-        print(f"{__file__} {__name__}: SUCCESS: usage for {user} on {computer} updated.")
-
-
-def get_connection(computer):
-    # global ssh ## thread problem if global ?!?
-    # todo handle SSH keys instead of forcing it to be passsword only
-    connect_kwargs = {
-        'allow_agent': False,
-        'look_for_keys': False,
-        'password': conf.ssh_password,
-        'timeout': 3
-    }
-    try:
-        ssh = Connection(
-            host=computer,
-            user=conf.ssh_user,
-            connect_kwargs=connect_kwargs
-        )
-
-    except AuthenticationException as e:
-        print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
-              f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
-        raise e # handle exception in function that called this one
-    except NoValidConnectionsError as e:
-        print(f"Cannot connect to SSH server on host '{computer}'. "
-              f"Check address in conf.py or try again later.")
-        raise e # handle exception in function that called this one
-    except socket.timeout:
-        print(f"Connection timed out on '{computer}'.")
-        raise e    
-    except Exception as e:
-        print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
-        raise e # handle exception in function that called this one
-    finally:
-        return ssh
+##### Time Change Queue Start #####
 
 def queue_time_change(user, computer, action, seconds, status='pending'):
     database = configparser.ConfigParser()
@@ -242,16 +326,6 @@ def queue_time_change(user, computer, action, seconds, status='pending'):
 
     print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds")
 
-def adjust_time(up_down_string, seconds, ssh, user):
-    command = f"{conf.ssh_timekpra_bin} --settimeleft {user} {up_down_string} {seconds}"
-    try:
-        ssh.run(command)
-        print(f"{'Removed' if up_down_string == '-' else 'Added'} {seconds} seconds for user {user}")
-        return True
-    except Exception as e:
-        print(f"Failed to adjust time for user {user}: {e}")
-        return False
-
 def process_pending_time_changes(ssh, computer):
     database = configparser.ConfigParser()
     database.read('database.ini')
@@ -276,3 +350,24 @@ def process_pending_time_changes(ssh, computer):
         # Write the changes back to database.ini file
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
+
+def adjust_time(up_down_string, seconds, ssh, user):
+    command = f"{conf.ssh_timekpra_bin} --settimeleft {user} {up_down_string} {seconds}"
+    try:
+        ssh.run(command)
+        print(f"{'Removed' if up_down_string == '-' else 'Added'} {seconds} seconds for user {user}")
+        return True
+    except Exception as e:
+        print(f"Failed to adjust time for user {user}: {e}")
+        return False
+
+##### Time Change Queue End #####
+
+def validate_request(computer, user):
+    if computer not in conf.trackme:
+        return {'result': "fail", "message": "computer not in config"}
+    # Check if any sublist in the list for the computer contains the user
+    if not any(user in userArray for userArray in conf.trackme[computer]):
+        return {'result': "fail", "message": "user not in computer in config"}
+    else:
+        return {'result': "success", "message": "valid user and computer"}
