@@ -14,8 +14,16 @@ import time
 app = Flask(__name__)
 
 #### threading
+
+# Create a threading event that can be set or cleared to control the loop
+background_service_event = threading.Event()
+
 def check_connection():
-    while True:
+    while background_service_event.is_set():
+        config = configparser.ConfigParser()
+        config.read('database.ini')
+        
+        # Now the loop checks the event instead of the config file
         trackme_config = main.get_config()
         
         for computer, users in trackme_config.items():
@@ -28,7 +36,21 @@ def check_connection():
                     
                 update_userinfo(computer, user)
 
-        time.sleep(30)
+        time.sleep(30)  # Waiting time between checks
+
+def start_background_service():
+    if not background_service_event.is_set():
+        background_service_event.set()
+        t = threading.Thread(target=check_connection)
+        t.daemon = True
+        t.start()
+        print("Background service started.")
+
+def stop_background_service():
+    if background_service_event.is_set():
+        background_service_event.clear()
+        print("Background service stopped.")
+
 #### threading
 
 def validate_request(computer, user):
@@ -116,18 +138,14 @@ def favicon():
 def read_database_ini():
     database = configparser.ConfigParser()
     database.read('database.ini')
-    return database
+    # Template variables are case sensitive so we make sure sections and keys are lowercase
+    normalized_database = {section.lower(): {key.lower(): value for key, value in database.items(section)} for section in database.sections()}
+    return normalized_database
 
-# Funktion zum Schreiben der gesamten INI-Datei
-def write_database_ini(database):
-    with open('database.ini', 'w') as configfile:
-        database.write(configfile)
 
 @app.route('/')
 def index():
-    database_read = read_database_ini()
-    # Konvertieren Sie die Konfiguration in ein Dictionary für das Template
-    database = {section: dict(database_read[section]) for section in database_read.sections()}
+    database = read_database_ini()
     return render_template('index.html', database=database)
 
 @app.route('/update_settings', methods=['POST'])
@@ -136,29 +154,36 @@ def update_settings():
     option = request.form.get('option')
     value = request.form.get('value')
     
+    # Check if the required data is present
     if not option or value is None:
         print('Missing data in request!')
         return "Missing data", 400
 
+    # Log the update
     print(f'Updating option {option} to {value}')
-    value = value.lower() == 'true'
-    database = read_database_ini()
-    database.set('Settings', option, str(value))
-    write_database_ini(database)
-    
+
+    # Read the current settings from the configuration file
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+    # Set the new value for the specified option
+    database.set('Settings', option, value)
+
+    # Write the updated configuration back to the file
+    with open('database.ini', 'w') as configfile:
+        database.write(configfile)
+
+    # Check if the updated option is 'background_service' and start/stop the service accordingly
+    if option == 'background_service':
+        if value == 'true':
+            start_background_service()
+        elif value == 'false':
+            stop_background_service()
+        
+    # Return a JSON response with the updated setting
     return jsonify({option: value})
 
 
-#### threading
-
-def start_threading():
-    t = threading.Thread(target=check_connection)
-    t.daemon = True
-    t.start()
-    app.run(host="0.0.0.0", port=8080)
-
-#### threading
 
 
 if __name__ == "__main__":
-    start_threading()
+    app.run(host="0.0.0.0", port=8080)

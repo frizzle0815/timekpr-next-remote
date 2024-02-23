@@ -17,9 +17,9 @@ print = functools.partial(print, flush=True) # for debugging, print messages sho
 ## User Config Start
 
 default_user_settings = {
-    'Option1': 'False',
-    'Option2': 'True',
-    'Option3': 'False',
+    'background_service': 'false',
+    'Option2': 'true',
+    'Option3': 'false',
 }
 
 default_usage = {
@@ -47,7 +47,7 @@ default_usage = {
 database = configparser.ConfigParser()
 
 # Set default values for all usage sections
-database['DEFAULT'] = default_usage
+database['DEFAULT_USAGE'] = default_usage
 
 # Check if the database.ini file exists
 if not os.path.isfile('database.ini'):
@@ -80,7 +80,7 @@ def get_usage(user, computer):
     if not database.has_section(section_name):
         # If the section does not exist, inform the user and use default values
         error_message = f"Section {section_name} not found in database.ini; using default values."
-        section_name = 'DEFAULT'  # Set to DEFAULT so it pulls the default values
+        section_name = 'DEFAULT_USAGE'  # Set to DEFAULT so it pulls the default values
     
     # Extract values using the DEFAULT section as fallback
     timestamp = database.get(section_name, 'TIMESTAMP', fallback='Never')
