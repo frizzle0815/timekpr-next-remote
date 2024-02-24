@@ -135,6 +135,7 @@ def get_connection(computer):
             user=conf.ssh_user,
             connect_kwargs=connect_kwargs
         )
+        return ssh
 
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
@@ -150,8 +151,6 @@ def get_connection(computer):
     except Exception as e:
         print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
         raise e # handle exception in function that called this one
-    finally:
-        return ssh
 
 def update_userinfo(ssh, computer, user):
     try:
@@ -220,8 +219,8 @@ def get_usage(user, computer):
     
     # Extract values using the DEFAULT section as fallback
     timestamp = database.get(section_name, 'TIMESTAMP', fallback='Never')
-    time_left = database.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
-    time_spent = database.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
+    time_left = database.getint(section_name, 'ACTUAL_TIME_LEFT_DAY', fallback=0)
+    time_spent = database.getint(section_name, 'ACTUAL_TIME_SPENT_DAY', fallback=0)
     week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
     week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
     week_left = week_limit - week_spent
@@ -332,11 +331,15 @@ def process_pending_time_changes(computer, ssh):
                 elif up_down_string == 'remove':
                     success = adjust_time('-', seconds, ssh, user)
 
-                # Update the status in the database
-                new_status = "success" if success else "failed"
-                database.set('time_changes', key, f"{up_down_string},{seconds},{new_status}")
+                # If success, update the status in the database
+                if success:
+                    new_status = "success"
+                    database.set('time_changes', key, f"{up_down_string},{seconds},{new_status}")
+                else:
+                    # Print the message indicating that the attempt failed and will be retried next time
+                    print(f"Attempt to adjust time for user {user} failed. Retrying next time...")
 
-        # Write the changes back to database.ini file
+        # Write the changes back to database.ini file if any changes were made
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
 
