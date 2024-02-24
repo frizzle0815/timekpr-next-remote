@@ -11,14 +11,31 @@ def config():
 
 @app.route("/get_usage/<computer>/<user>")
 def get_usage(computer, user):
-    if main.validate_request(computer, user)['result'] == "fail":
-        return main.validate_request(computer, user), 500
+    # First, validate the request
+    validation_result = main.validate_request(computer, user)
+    if validation_result['result'] == "fail":
+        return validation_result, 500
+
+    # Attempt to establish an SSH connection
+    ssh = None
     try:
-        main.update_all_userinfo() ## if connection successfull, update database.ini
+        ssh = main.get_connection(computer)
+        if ssh:
+            # If the connection is successful, update user info
+            main.update_userinfo(ssh, computer, user)
+            main.process_pending_time_changes(computer, ssh)
+        else:
+            # If the connection is not successful, handle it accordingly
+            print(f"Could not establish SSH connection to {computer}")
     except Exception as e:
         print(f"SSH Error: {e}")
-    usage = main.get_usage(user, computer)  ## if no connection, use saved data
-    # print(f"{__file__} {__name__}: {usage}")
+    finally:
+        # Close the SSH connection if it was established
+        if ssh:
+            ssh.close()
+
+    usage = main.get_usage(user, computer) # Get usage data, either from the updated info or from saved data
+    print(f"{__file__} {__name__}: {usage}")
     return usage, 200
 
 @app.route("/queue_time_change", methods=['POST'])

@@ -87,12 +87,15 @@ def check_connection():
                 ssh = None
                 try:
                     ssh = get_connection(computer)
+                    if ssh:
+                        # First, update user info and ensure the operation is complete to avoid race conditions => data conflict!
+                        update_userinfo(ssh, computer, user)
+                        # Then, process pending time changes
+                        process_pending_time_changes(computer, ssh)
                 except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
                     print(f"No connection to {computer}: {e}")
                 finally:
                     if ssh:
-                        update_userinfo(ssh, computer, user)
-                        process_pending_time_changes(ssh, computer)
                         ssh.close()  # Ensure the connection is closed after each attempt
 
         time.sleep(30)  # Waiting time between checks
@@ -165,21 +168,6 @@ def update_userinfo(ssh, computer, user):
         print(f"Userinfo updated successfully for {user} on {computer}")
         return {'result': "success", 'message': "Userinfo updated successfully"}
 
-def update_all_userinfo():
-    #### For update without background service #####
-    for computer, userArrays in conf.trackme.items():
-        for users in userArrays:
-            user = users[0]  # Use only first value in array = use user and ignore alias
-            ssh = None
-            try:
-                ssh = get_connection(computer)
-                result = update_userinfo(ssh, computer, user)
-                # Handle the result if necessary
-            except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
-                print(f"Failed to update info for {user} on {computer}: {e}")
-            finally:
-                if ssh:
-                    ssh.close()  # Ensure the SSH connection is closed
 
 def save_to_ini(user, computer, timekpra_userinfo_output):
     database = configparser.ConfigParser()
@@ -290,62 +278,63 @@ def queue_time_change(user, computer, action, seconds, status='pending'):
     database = configparser.ConfigParser()
     database.read('database.ini')
 
-    # Check if a section for Time Changes exists, if not create it
-    if 'time_changes' not in database.sections():
-        database.add_section('time_changes')
+    try:
+        # Check if a section for Time Changes exists, if not create it
+        if 'time_changes' not in database.sections():
+            database.add_section('time_changes')
 
-    # Check for existing pending entries for this computer-user combination
-    for key, value in database.items('time_changes'):
-        if key.startswith(f"{computer}_{user}_") and value.endswith("pending"):
-            # Change the status of the existing pending entry to 'cancelled'
-            database.set('time_changes', key, value.replace("pending", "cancelled"))
+        # Check for existing pending entries for this computer-user combination
+        for key, value in database.items('time_changes'):
+            if key.startswith(f"{computer}_{user}_") and value.endswith("pending"):
+                # Change the status of the existing pending entry to 'cancelled'
+                database.set('time_changes', key, value.replace("pending", "cancelled"))
 
-    # Create a unique key for the new change request
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    change_key = f"{computer}_{user}_{timestamp}"
+        # Create a unique key for the new change request
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        change_key = f"{computer}_{user}_{timestamp}"
 
-    # Add the new change request to the section with status 'pending'
-    database.set('time_changes', change_key, f"{action},{seconds},{status}")
+        # Add the new change request to the section with status 'pending'
+        database.set('time_changes', change_key, f"{action},{seconds},{status}")
 
-    # Write the changes back to database.ini file
-    with open('database.ini', 'w') as configfile:
-        database.write(configfile)
+        # Clean up non-pending entries to keep only the last 5 for this user
+        non_pending_changes = [key for key, value in database.items('time_changes')
+                               if key.startswith(f"{computer}_{user}_") and not value.endswith("pending")]
+        # Sort non-pending changes by timestamp (assuming the timestamp is at the end of the key)
+        non_pending_changes.sort(key=lambda x: x.split('_')[-1], reverse=True)
+        # Remove entries beyond the 5th one
+        for old_change in non_pending_changes[5:]:
+            database.remove_option('time_changes', old_change)
 
-    # Clean up non-pending entries to keep only the last 5 for this user
-    non_pending_changes = [key for key, value in database.items('time_changes')
-                           if key.startswith(f"{computer}_{user}_") and not value.endswith("pending")]
-    # Sort non-pending changes by timestamp (assuming the timestamp is at the end of the key)
-    non_pending_changes.sort(key=lambda x: x.split('_')[-1], reverse=True)
-    # Remove entries beyond the 5th one
-    for old_change in non_pending_changes[5:]:
-        database.remove_option('time_changes', old_change)
+        # Write the changes back to database.ini file once
+        with open('database.ini', 'w') as configfile:
+            database.write(configfile)
 
-    # Write the changes back to database.ini file
-    with open('database.ini', 'w') as configfile:
-        database.write(configfile)
+        print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds")
+    except Exception as e:
+        print(f"An error occurred while updating the database.ini file: {e}")
+        # Handle the error, possibly restoring from a backup or retrying the operation
 
-    print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds")
-
-def process_pending_time_changes(ssh, computer):
+def process_pending_time_changes(computer, ssh):
     database = configparser.ConfigParser()
     database.read('database.ini')
 
     if 'time_changes' in database.sections():
         for key, value in database.items('time_changes'):
-            if value.endswith("pending"):
-                action, seconds, status = value.split(',')
-                user = key.split('_')[1]  # Assuming the key format is "computer_user_timestamp"
+            # Extract computer from the key and check if it matches the given computer
+            key_computer, user, _ = key.split('_')  # Assuming the key format is "computer_user_timestamp"
+            if key_computer == computer and value.endswith("pending"):
+                up_down_string, seconds, status = value.split(',')
                 success = False
 
                 # Directly call adjust_time with the appropriate sign based on the action
-                if action == 'add':
+                if up_down_string == 'add':
                     success = adjust_time('+', seconds, ssh, user)
-                elif action == 'remove':
+                elif up_down_string == 'remove':
                     success = adjust_time('-', seconds, ssh, user)
 
                 # Update the status in the database
                 new_status = "success" if success else "failed"
-                database.set('time_changes', key, f"{action},{seconds},{new_status}")
+                database.set('time_changes', key, f"{up_down_string},{seconds},{new_status}")
 
         # Write the changes back to database.ini file
         with open('database.ini', 'w') as configfile:
