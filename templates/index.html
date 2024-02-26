@@ -177,6 +177,9 @@
       <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Home</a>
     </li>
     <li class="nav-item">
+      <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab" aria-controls="history" aria-selected="false">History</a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link" id="database-tab" data-toggle="tab" href="#database" role="tab" aria-controls="database" aria-selected="false">Database</a>
     </li>
     <li class="nav-item">
@@ -191,6 +194,65 @@
       <div id='messageDisplay'></div> <!-- Status Message -->
       <div id="people"></div> <!-- Populated by script -->
     </div>
+
+<!-- History Tab Pane -->
+<div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+  <br>
+  {% if database.time_changes %}
+    {% set history_data = namespace(data={}) %}
+    <!-- Organize data by computer_user -->
+    {% for key, value in database.time_changes.items() %}
+      {% set parts = key.split('_') %}
+      {% set computer_user = parts[0] ~ '_' ~ parts[1] %}
+      {% if computer_user not in history_data.data %}
+        {% set _dummy = history_data.data.update({computer_user: []}) %}
+      {% endif %}
+      {% set details = value.split(',') %}
+      {% set _dummy = history_data.data[computer_user].append({
+        'action': details[0],
+        'seconds': details[1],
+        'timeframe': details[2],
+        'status': details[3],
+        'timestamp': parts[2]
+      }) %}
+    {% endfor %}
+
+    <!-- Create a table for each computer_user -->
+    {% for computer_user, changes in history_data.data.items() %}
+      <h3>{{ computer_user.replace('_', ' - ') }}</h3>
+      <table class="table table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th scope="col">Timestamp</th>
+            <th scope="col">Action</th>
+            <th scope="col">Seconds</th>
+            <th scope="col">Timeframe</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if changes %}
+            {% for change in changes %}
+              <tr>
+                <td>{{ change.timestamp | format_timestamp }}</td>
+                <td>{{ change.action }}</td>
+                <td>{{ change.seconds }}</td>
+                <td>{{ change.timeframe }}</td>
+                <td>{{ change.status }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-center">Empty</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    {% endfor %}
+  {% else %}
+    <p>No time changes yet.</p>
+  {% endif %}
+</div>
 
     <!-- Database Area -->
     <div class="tab-pane fade" id="database" role="tabpanel" aria-labelledby="database-tab">
@@ -272,13 +334,11 @@
                         "<span class='user' id='" + user + rand_dom + "'>" +
                             "<p  class='h3'>" + display_name + " [" + user + "]<span class='notify loading'></span></p>" +
                             "<span class='time_wrapper'>" +
-                                "W Unused: <span class='time week_left'>...</span> " +
-                                "W Used: <span class='time week_spent'>...</span><br/>" +
+                                "Weekly Limit: <span class='time week_total'>...</span><br/>" +
                                 "<div class='progress'>" +
                                     "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
                                 "</div>" +
-                                "Unused: <span class='time time_left'>...</span> " +
-                                "Used: <span class='time time_spent'>...</span><br/>" +
+                                "Daily Limit: <span class='time time_total'>...</span><br/>" +
                                 "<div class='progress'>" +
                                     "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
                                 "</div>" +
@@ -290,6 +350,14 @@
                                 "<input type='radio'  class='btn-check' id='remove" + rand_dom + "' value='remove' name='action' />" +
                                 "<label  class='btn btn-outline-primary' for='remove" + rand_dom + "'>Remove</label> " +
                             "</div> " +
+                            "<div class='btn-group' role='group' aria-label='Timeframe'>" +
+                                "<input type='radio' class='btn-check' id='daily" + rand_dom + "' value='daily' name='timeframe' />" +
+                                "<label class='btn btn-outline-primary' for='daily" + rand_dom + "'>Daily</label>" +
+                                "<input type='radio' class='btn-check' id='weekly" + rand_dom + "' value='weekly' name='timeframe' />" +
+                                "<label class='btn btn-outline-primary' for='weekly" + rand_dom + "'>Weekly</label>" +
+                                "<input type='radio' class='btn-check' id='monthly" + rand_dom + "' value='monthly' name='timeframe' />" +
+                                "<label class='btn btn-outline-primary' for='monthly" + rand_dom + "'>Monthly</label>" +
+                            "</div>" +
                             "<div class='btn-group' role='group' aria-label='Times'>" +
                                 times +
                             "</div>" +
@@ -309,7 +377,7 @@
                     setInterval(function () {
                         $('#' + user  + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
                     }, 1400);
-                    $.getJSON( "/get_usage/" + computer + "/" + user, function( usage ) {
+                    $.getJSON( "/get_database/" + computer + "/" + user, function( usage ) {
                         render_user_to_dom(user, computer, usage, rand_dom);
                     });
                 });
@@ -317,7 +385,7 @@
         });
 
         function get_times(rand_dom){
-            const second_options = [300, 900, 1800, 2700, 3600];
+            const second_options = [60, 300, 1800, 2700, 3600];
             let times = '';
             $.each(second_options, function (index, seconds) {
                 times = times + "<input type='radio'  class='btn-check'  value='" + seconds + "' id='" + seconds +  rand_dom + "' name='seconds' />" +
@@ -336,18 +404,19 @@
             $("#" + user + rand_dom + " .save_me" ).click(function() {
                 const computer = $( this ).attr('computer');
                 const action = $( '#' + user + rand_dom + ' input[name="action"]:checked').val();
+                const timeframe = $( '#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
                 const seconds = $( '#' + user + rand_dom + ' input[name="seconds"]:checked').val();
-                console.log("Attempting to save: ", {user, computer, action, seconds}); // Debug
-                if(action !== undefined && seconds !== undefined){
+                console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
+                if(action !== undefined && seconds !== undefined && timeframe !== undefined){
                     $('input').prop('checked', false);
-                    add_or_remove_time(user, computer, action, seconds, rand_dom);
+                    add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom); // Pass the timeframe to the function
                     $( '#' + user + rand_dom + ' .notify').html('Updated!').fadeIn(function() {
                         setTimeout(function() {
                             $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                         }, 1000);
                     });
                 } else {
-                    alert("Choose 'Add' or 'Remove' and choose an amount of time to add.");
+                    alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
                 }
             });
         }
@@ -380,9 +449,9 @@
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .last_seen").html(usage.last_seen);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
-                $('#' + user + rand_dom + " .time_spent").html(secondsToHms(usage.time_spent));
+                $('#' + user + rand_dom + " .time_total").html(secondsToHms(timeTotal));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
-                $('#' + user + rand_dom + " .week_spent").html(secondsToHms(usage.week_spent));
+                $('#' + user + rand_dom + " .week_total").html(secondsToHms(weekTotal));
                 $('#' + user + rand_dom + " .progress-bar.time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .progress-bar.week_left").html(secondsToHms(usage.week_left));
 
@@ -402,12 +471,13 @@
 
         }
 
-        function add_or_remove_time(user, computer, action, seconds){
+        function add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom){
             const data = {
                 'user': user,
                 'computer': computer,
                 'action': action,
                 'seconds': seconds,
+                'timeframe': timeframe,
                 'status': 'pending'
             };
             $.ajax({
@@ -425,7 +495,7 @@
             });
 
             // Display the variables that were sent
-            displayMessage('Variables sent: User=' + user + ', Computer=' + computer + ', Action=' + action + ', Seconds=' + seconds);
+            displayMessage('Variables sent: User=' + user + ', Computer=' + computer + ', Action=' + action + ', Seconds=' + seconds + ', Timeframe=' + timeframe);
         }
 
         function displayMessage(message) {
@@ -481,7 +551,7 @@
             type: 'POST',
             data: { option: option, value: value.toString() }, // Konvertieren Sie den booleschen Wert in einen String
             success: function(response) {
-              console.log('Settings updated:: ', response);
+              console.log('Settings updated: ', response);
             },
             error: function(error) {
               console.error('Error updating settings: ', error);

@@ -130,12 +130,13 @@ def get_connection(computer):
         'timeout': 3
     }
     try:
-        ssh = Connection(
+        connection = Connection(
             host=computer,
             user=conf.ssh_user,
             connect_kwargs=connect_kwargs
         )
-        return ssh
+        print(f"SSH connection established to {computer}.")  # Debug output
+        return connection
 
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
@@ -145,7 +146,7 @@ def get_connection(computer):
         print(f"Cannot connect to SSH server on host '{computer}'. "
               f"Check address in conf.py or try again later.")
         raise e # handle exception in function that called this one
-    except socket.timeout:
+    except socket.timeout as e:
         print(f"Connection timed out on '{computer}'.")
         raise e    
     except Exception as e:
@@ -206,7 +207,7 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
 
 ##### Update Web Frontend Start ##### 
 
-def get_usage(user, computer):
+def get_database(user, computer):
     database = configparser.ConfigParser()
     database.read('database.ini')
     section_name = f'{computer}_{user}'
@@ -273,7 +274,7 @@ def get_usage(user, computer):
 
 ##### Time Change Queue Start #####
 
-def queue_time_change(user, computer, action, seconds, status='pending'):
+def queue_time_change(user, computer, action, seconds, timeframe, status='pending'):
     database = configparser.ConfigParser()
     database.read('database.ini')
 
@@ -293,7 +294,8 @@ def queue_time_change(user, computer, action, seconds, status='pending'):
         change_key = f"{computer}_{user}_{timestamp}"
 
         # Add the new change request to the section with status 'pending'
-        database.set('time_changes', change_key, f"{action},{seconds},{status}")
+        # Include the timeframe in the value
+        database.set('time_changes', change_key, f"{action},{seconds},{timeframe},{status}")
 
         # Clean up non-pending entries to keep only the last 5 for this user
         non_pending_changes = [key for key, value in database.items('time_changes')
@@ -304,11 +306,11 @@ def queue_time_change(user, computer, action, seconds, status='pending'):
         for old_change in non_pending_changes[5:]:
             database.remove_option('time_changes', old_change)
 
-        # Write the changes back to database.ini file once
+        # Write the changes back to the database.ini file
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
 
-        print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds")
+        print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds ({timeframe})")
     except Exception as e:
         print(f"An error occurred while updating the database.ini file: {e}")
         # Handle the error, possibly restoring from a backup or retrying the operation
@@ -319,22 +321,20 @@ def process_pending_time_changes(computer, ssh):
 
     if 'time_changes' in database.sections():
         for key, value in database.items('time_changes'):
-            # Extract computer from the key and check if it matches the given computer
+            # Extract computer and user from the key and check if it matches the given computer
             key_computer, user, _ = key.split('_')  # Assuming the key format is "computer_user_timestamp"
             if key_computer == computer and value.endswith("pending"):
-                up_down_string, seconds, status = value.split(',')
+                # Extract action, seconds, timeframe, and status from the value
+                action, seconds, timeframe, status = value.split(',')
                 success = False
 
-                # Directly call adjust_time with the appropriate sign based on the action
-                if up_down_string == 'add':
-                    success = adjust_time('+', seconds, ssh, user)
-                elif up_down_string == 'remove':
-                    success = adjust_time('-', seconds, ssh, user)
+                # Call adjust_time with the appropriate parameters based on the action and timeframe
+                success = adjust_time(timeframe, action, seconds, ssh, user, computer)
 
                 # If success, update the status in the database
                 if success:
                     new_status = "success"
-                    database.set('time_changes', key, f"{up_down_string},{seconds},{new_status}")
+                    database.set('time_changes', key, f"{action},{seconds},{timeframe},{new_status}")
                 else:
                     # Print the message indicating that the attempt failed and will be retried next time
                     print(f"Attempt to adjust time for user {user} failed. Retrying next time...")
@@ -343,14 +343,60 @@ def process_pending_time_changes(computer, ssh):
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
 
-def adjust_time(up_down_string, seconds, ssh, user):
-    command = f"{conf.ssh_timekpra_bin} --settimeleft {user} {up_down_string} {seconds}"
+def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
+    # Read the current limits from the database.ini file
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+    
+    # Construct the section name from the computer and user
+    section_name = f"{computer}_{user}"
+    
+    # Determine the current limit based on the timeframe
+    if timeframe == 'weekly':
+        current_limit_key = 'LIMIT_PER_WEEK'
+    elif timeframe == 'monthly':
+        current_limit_key = 'LIMIT_PER_MONTH'
+    else:
+        current_limit_key = None
+
+    # Convert up_down_string from 'add'/'remove' to '+'/'-'
+    up_down_symbol = '+' if up_down_string == 'add' else '-'
+
+    # If the timeframe is weekly or monthly, calculate the new limit
+    if current_limit_key:
+        current_limit = int(database[section_name].get(current_limit_key, 0))
+        if up_down_string == 'add':
+            new_limit = current_limit + int(seconds)
+        else:  # 'remove'
+            new_limit = max(0, current_limit - int(seconds))  # Ensure the limit doesn't go below zero
+        # Use the new limit for the SSH command
+        seconds = str(new_limit)
+
+    # Map the timeframe to the corresponding command flag
+    timeframe_flags = {
+        'daily': '--settimeleft',
+        'weekly': '--settimelimitweek',
+        'monthly': '--settimelimitmonth'
+    }
+    command_flag = timeframe_flags.get(timeframe)
+
+    # Construct the command with the appropriate flag
+    # Do not include up_down_symbol for weekly or monthly timeframes
+    if timeframe in ['weekly', 'monthly']:
+        command = f"{conf.ssh_timekpra_bin} {command_flag} {user} {seconds}"
+    else:
+        command = f"{conf.ssh_timekpra_bin} {command_flag} {user} {up_down_symbol} {seconds}"  # Ensure no space between up_down_symbol and seconds
+    
     try:
+        print(f"Executing command: {command}")
+        # Execute the command via SSH
         ssh.run(command)
-        print(f"{'Removed' if up_down_string == '-' else 'Added'} {seconds} seconds for user {user}")
+        # Log the result
+        print(f"{'Removed' if up_down_string == 'remove' else 'Added'} {seconds} seconds for user {user} on {computer} ({timeframe})")
         return True
     except Exception as e:
-        print(f"Failed to adjust time for user {user}: {e}")
+        # Log the failure
+        print(f"Failed to adjust time for user {user} on {computer} ({timeframe}): {e}")
         return False
 
 ##### Time Change Queue End #####

@@ -2,6 +2,7 @@ import main  # Access functions from main.py
 from flask import Flask, render_template, request, jsonify, send_from_directory  # Flask-related functionality
 import configparser  # Used for reading and writing 'database.ini' within the update_settings function
 import os  # Used to locate the 'favicon.ico' file within the static directory
+from datetime import datetime # Used to format timestamps
 
 app = Flask(__name__)
 
@@ -9,8 +10,8 @@ app = Flask(__name__)
 def config():
     return main.get_config()
 
-@app.route("/get_usage/<computer>/<user>")
-def get_usage(computer, user):
+@app.route("/get_database/<computer>/<user>")
+def get_database(computer, user):
     # First, validate the request
     validation_result = main.validate_request(computer, user)
     if validation_result['result'] == "fail":
@@ -34,7 +35,7 @@ def get_usage(computer, user):
         if ssh:
             ssh.close()
 
-    usage = main.get_usage(user, computer) # Get usage data, either from the updated info or from saved data
+    usage = main.get_database(user, computer) # Get usage data, either from the updated info or from saved data
     print(f"{__file__} {__name__}: {usage}")
     return usage, 200
 
@@ -46,10 +47,11 @@ def queue_time_change():
         computer = data['computer']
         action = data['action']
         seconds = data['seconds']
+        timeframe = data['timeframe']
         status = data['status']
         
         # Save to database.ini with status 'pending'
-        main.queue_time_change(user, computer, action, seconds, status)
+        main.queue_time_change(user, computer, action, seconds, timeframe, status)
         return {'result': "queued"}, 200
     except Exception as e:
         print("Error processing request:", e)
@@ -91,6 +93,23 @@ def update_settings():
     return jsonify({option: value})
 
 #### Give database.ini to web frontend Start #####
+
+##### Formatting Functions for web frontend Start #####
+
+# Define a custom filter function
+## Don't move this to main.py! ##
+def format_timestamp(value, format='%Y-%m-%d %H:%M:%S'):
+    try:
+        # Assume the timestamp is in the format 'YYYYmmddHHMMSS'
+        timestamp = datetime.strptime(value, '%Y%m%d%H%M%S')
+        return timestamp.strftime(format)
+    except ValueError:
+        return value  # Return the original value if there's an error
+
+# Register the filter with the Jinja2 environment
+app.jinja_env.filters['format_timestamp'] = format_timestamp
+
+##### Formatting Functions for web frontend End #####
 
 def read_database_ini():
     database = configparser.ConfigParser()
