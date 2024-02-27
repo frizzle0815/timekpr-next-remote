@@ -135,23 +135,29 @@ def get_connection(computer):
             user=conf.ssh_user,
             connect_kwargs=connect_kwargs
         )
+        connection.open()
         print(f"SSH connection established to {computer}.")  # Debug output
-        return connection
-
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
               f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
-        raise e # handle exception in function that called this one
+        connection= None
+        raise # handle exception in function that called this one
     except NoValidConnectionsError as e:
         print(f"Cannot connect to SSH server on host '{computer}'. "
               f"Check address in conf.py or try again later.")
-        raise e # handle exception in function that called this one
+        connection= None
+        raise # handle exception in function that called this one
     except socket.timeout as e:
         print(f"Connection timed out on '{computer}'.")
-        raise e    
+        connection= None
+        raise    
     except Exception as e:
         print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
-        raise e # handle exception in function that called this one
+        connection= None
+        raise # handle exception in function that called this one
+    finally:
+        print(f"Connection is: '{connection}'.") ## Debug
+        return connection
 
 def update_userinfo(ssh, computer, user):
     try:
@@ -297,13 +303,13 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
         # Include the timeframe in the value
         database.set('time_changes', change_key, f"{action},{seconds},{timeframe},{status}")
 
-        # Clean up non-pending entries to keep only the last 5 for this user
+        # Clean up non-pending entries to keep only the last 10 for this user
         non_pending_changes = [key for key, value in database.items('time_changes')
                                if key.startswith(f"{computer}_{user}_") and not value.endswith("pending")]
         # Sort non-pending changes by timestamp (assuming the timestamp is at the end of the key)
         non_pending_changes.sort(key=lambda x: x.split('_')[-1], reverse=True)
         # Remove entries beyond the 5th one
-        for old_change in non_pending_changes[5:]:
+        for old_change in non_pending_changes[10:]:
             database.remove_option('time_changes', old_change)
 
         # Write the changes back to the database.ini file
@@ -311,6 +317,13 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
             database.write(configfile)
 
         print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds ({timeframe})")
+
+        ssh = get_connection(computer)
+        if ssh:
+            process_pending_time_changes(computer, ssh)
+        else:
+            print("No connection at the moment. Time changes will be sent later.")
+
     except Exception as e:
         print(f"An error occurred while updating the database.ini file: {e}")
         # Handle the error, possibly restoring from a backup or retrying the operation
