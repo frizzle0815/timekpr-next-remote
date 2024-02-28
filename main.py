@@ -88,10 +88,10 @@ def check_connection():
                 try:
                     ssh = get_connection(computer)
                     if ssh:
-                        # First, update user info and ensure the operation is complete to avoid race conditions => data conflict!
-                        update_userinfo(ssh, computer, user)
                         # Then, process pending time changes
                         process_pending_time_changes(computer, ssh)
+                        # First, update user info and ensure the operation is complete to avoid race conditions => data conflict!
+                        update_userinfo(ssh, computer, user)
                 except (AuthenticationException, NoValidConnectionsError, socket.timeout, Exception) as e:
                     print(f"No connection to {computer}: {e}")
                 finally:

@@ -1,3 +1,5 @@
+# timekpr-next-web.py
+
 import main  # Access functions from main.py
 from flask import Flask, render_template, request, jsonify, send_from_directory  # Flask-related functionality
 import configparser  # Used for reading and writing 'database.ini' within the update_settings function
@@ -23,8 +25,8 @@ def get_database(computer, user):
         ssh = main.get_connection(computer)
         if ssh:
             # If the connection is successful, update user info
-            main.update_userinfo(ssh, computer, user)
             main.process_pending_time_changes(computer, ssh)
+            main.update_userinfo(ssh, computer, user)
         else:
             # If the connection is not successful, handle it accordingly
             print(f"Could not establish SSH connection to {computer}")
@@ -131,5 +133,3 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
         'favicon.ico',mimetype='image/vnd.microsoft.icon')
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)

@@ -1,3 +1,4 @@
 fabric
 paramiko
 flask
+gunicorn
