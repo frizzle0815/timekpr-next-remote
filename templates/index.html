@@ -34,9 +34,17 @@
             .failed_load {
                 height: 62px;
             }
-            .h6 {
+            .h6 { /* user@computer */
               font-size: 0.75rem;
               font-style: italic;
+            }
+            .btn-outline-primary.no-focus:focus,
+            .btn-outline-primary.no-focus:hover,
+            .btn-outline-primary.no-focus:active { /* Footer Buttons */
+              color: #0d6efd;
+              box-shadow: none;
+              outline: none;
+              background-color: #fff;
             }
 
             /* ==========================================================================
@@ -155,26 +163,33 @@
             /* ==========================================================================
             Accordions
             ========================================================================== */
-            /* Entfernen des Rahmens vom Accordion-Item */
             .accordion-item {
               border: none;
             }
 
-            /* Entfernen des Rahmens vom Accordion-Button, wenn er nicht kollabiert ist */
             .accordion-button:not(.collapsed) {
               border: none;
-              box-shadow: none; /* Optional: Entfernt Schatten, falls vorhanden */
+              box-shadow: none;
+              text-align: left;
+              padding-top: 0;
+              padding-left: 0;
+              padding-bottom: 0;
+              margin-bottom: 0;
             }
 
-            /* Entfernen des Rahmens vom Accordion-Button, wenn er kollabiert ist */
             .accordion-button.collapsed {
               border: none;
-              box-shadow: none; /* Optional: Entfernt Schatten, falls vorhanden */
+              box-shadow: none;
+              text-align: left;
+              padding-top: 0;
+              padding-left: 0;
+              padding-bottom: 0;
+              margin-bottom: 0;
             }
 
-            /* Verkleinern der Überschrift */
             .accordion-header h2 {
-              font-size: 0.9rem; /* Setzen Sie die gewünschte Schriftgröße */
+              font-size: 0.9rem;
+              margin-bottom: 0;
             }
         
         </style>
@@ -317,10 +332,10 @@
     <!-- Take care: variables are case-senstive!-->
     <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
       <br>
-      <div class="form-check form-switch">
+<!--       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="background_service" name="background_service" {% if database['settings']['background_service'] == 'true' %}checked{% endif %} onchange="updateSetting('background_service', this.checked ? 'true' : 'false')">
         <label class="form-check-label" for="background_service">Background Service</label>
-      </div>
+      </div> -->
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="show_time_change" name="show_time_change" {% if database['settings']['show_time_change'] == 'true' %}checked{% endif %} onchange="updateSetting('show_time_change', this.checked ? 'true' : 'false')">
         <label class="form-check-label" for="show_time_change">Show Time Change</label>
@@ -336,22 +351,11 @@
 
   <!-- Footer  Area -->
   <div>
-    <label class="btn btn-outline-primary" id="toggle_theme">Toggle Theme</label>
-    <label class="btn btn-outline-primary" id="auto_update">
+    <label class="btn btn-outline-primary no-focus" id="toggle_theme">Toggle Theme</label>
+    <label class="btn btn-outline-primary no-focus" id="auto_update">
       Auto Update:
       <span id="status-background_service">
-          {% if database['settings']['background_service'] == 'true' %}
-          <!-- Bootstrap Icons -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="green" class="bi bi-check-circle" viewBox="0 0 16 16">
-                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
-              </svg>
-          {% else %}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-x-circle" viewBox="0 0 16 16">
-                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
-              </svg>
-          {% endif %}
+        <!-- Updated by script -->
       </span>
   </label>
   </div>
@@ -374,27 +378,27 @@
                     // Append user elements to the 'people' container
                     $("#people").append(
                         "<span class='user' id='" + user + rand_dom + "'>" +
-                            "<p class='h3'>" + display_name + "<span class='notify loading'></span></p>" +
-                            "<p class='h6'>[" + user + "@" + computer + "]</p>" +
-                            "<span class='time_wrapper'>" +
-                                "Weekly Limit: <span class='time week_total'>...</span><br/>" +
-                                "<div class='progress'>" +
-                                    "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
-                                "</div>" +
-                                "Daily Limit: <span class='time time_total'>...</span><br/>" +
-                                "<div class='progress'>" +
-                                    "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
-                                "</div>" +
-                                "Last seen: <span class='time last_seen'>...</span>" +
-                            "</span><br/>" +
                             "<div class='accordion' id='accordion" + rand_dom + "'>" +
                                 "<div class='accordion-item'>" +
                                     "<h2 class='accordion-header' id='heading" + rand_dom + "'>" +
                                         "<button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#collapse" + rand_dom + "' aria-expanded='false' aria-controls='collapse" + rand_dom + "'>" +
+                                          "<span class='h3'>" + display_name + "<span class='notify loading'></span></span>" +
                                         "</button>" +
                                     "</h2>" +
+                                    "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
+                                        "<p class='h6'>[" + user + "@" + computer + "]</p>" +
+                                        "Weekly Limit: <span class='time week_total'>...</span><br/>" +
+                                        "<div class='progress'>" +
+                                            "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
+                                        "</div>" +
+                                        "Daily Limit: <span class='time time_total'>...</span><br/>" +
+                                        "<div class='progress'>" +
+                                            "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
+                                        "</div>" +
+                                        "Last seen: <span class='time last_seen'>...</span>" +
+                                    "</div>" +
                                     "<div id='collapse" + rand_dom + "' class='accordion-collapse collapse' aria-labelledby='heading" + rand_dom + "' data-bs-parent='#accordion" + rand_dom + "'>" +
-                                        "<div class='accordion-body'>" +
+                                      "<div class='accordion-body'>" +
                                             "<div class='btn-group' role='group' aria-label='Action'>" +
                                                 "<input type='radio' class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
                                                 "<label class='btn btn-outline-primary' for='add" + rand_dom + "'>Add</label>" +
@@ -411,13 +415,10 @@
                                             "</div>" +
                                             "<div class='btn-group' role='group' aria-label='Time Slider'>" +
                                                 "<div class='btn btn-outline-primary'>" +
-                                                    "<span id='slider-time-value" + rand_dom + "'>1 min</span>" + 
-                                                    "<input type='range' class='form-range' id='seconds" +  rand_dom + "' name='seconds' min='60' max='7200' step='60' value='60' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
+                                                    "<span id='slider-time-value" + rand_dom + "'>15 min</span>" + 
+                                                    "<input type='range' class='form-range' id='seconds" +  rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
                                                 "</div>" +
                                             "</div>" +
-                                            //"<div class='btn-group' role='group' aria-label='Times'>" + 
-                                            //    times +
-                                            //"</div>" +
                                             "<div class='btn-group' role='group' aria-label='save'>" +
                                                 "<button class='btn btn-outline-primary save_me' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
                                             "</div> " +
@@ -442,6 +443,10 @@
                         render_user_to_dom(user, computer, usage, rand_dom);
                     });
                 });
+            });
+            $("#people").on("click", ".user-progress", function() {
+                var collapseTarget = $(this).data("toggle-target");
+                $(collapseTarget).collapse('toggle');
             });
         });
 
@@ -476,8 +481,11 @@
                 console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
                 if(action !== undefined && seconds !== undefined && timeframe !== undefined){
                     $('input').prop('checked', false);
-                    add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom); // Pass the timeframe to the function
-                    $( '#' + user + rand_dom + ' .notify').html('Updated!').fadeIn(function() {
+                    add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom);
+                    // Collapse accordion
+                    $('#collapse' + rand_dom).collapse('hide'); 
+                    // Show Updated Notification
+                    $( '#' + user + rand_dom + ' .notify').html('Update queued!').fadeIn(function() {
                         setTimeout(function() {
                             $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                         }, 1000);
@@ -625,6 +633,35 @@
             }
           });
         }
+
+        // Background Service
+        var isBackgroundServiceEnabled = "{{ database['settings']['background_service'] }}" === 'true';
+
+        // Change icons of background service
+        function updateStatusIcon() {
+          var statusSpan = document.getElementById('status-background_service');
+          statusSpan.innerHTML = isBackgroundServiceEnabled ? 
+          '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="green" class="bi bi-check-circle" viewBox="0 0 16 16">' +
+            '<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>' +
+            '<path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>' +
+          '</svg>' :
+          '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-x-circle" viewBox="0 0 16 16">' +
+            '<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>' +
+            '<path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>' +
+          '</svg>';
+        }
+
+        // Update icon on page load
+        updateStatusIcon();
+
+        // Event-Handler for Background Service
+        document.getElementById('auto_update').addEventListener('click', function() {
+          isBackgroundServiceEnabled = !isBackgroundServiceEnabled;
+          
+          // Call Funktin updateSettings to update database.ini
+          updateSetting('background_service', isBackgroundServiceEnabled ? 'true' : 'false');
+          updateStatusIcon();
+        });
 
     </script>
 
