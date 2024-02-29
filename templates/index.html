@@ -34,6 +34,10 @@
             .failed_load {
                 height: 62px;
             }
+            .h6 {
+              font-size: 0.75rem;
+              font-style: italic;
+            }
 
             /* ==========================================================================
                Fork Me on Github Stuffs
@@ -148,9 +152,9 @@
               background-color: darkgray;
             }
 
-               /* ==========================================================================
-               Accordions
-               ========================================================================== */
+            /* ==========================================================================
+            Accordions
+            ========================================================================== */
             /* Entfernen des Rahmens vom Accordion-Item */
             .accordion-item {
               border: none;
@@ -172,8 +176,9 @@
             .accordion-header h2 {
               font-size: 0.9rem; /* Setzen Sie die gewünschte Schriftgröße */
             }
-
+        
         </style>
+
     <title>
         Timekpr Next Remote
     </title>
@@ -351,9 +356,6 @@
   </label>
   </div>
 
-
-
-  
 </div>
 
   <!-- Script  Area -->
@@ -366,13 +368,14 @@
                     let rand_dom = '_' + uuidv4();
                     let user = userArray[0];
                     let display_name = userArray[1];
-                    let times = get_times(rand_dom);
+                    //let times = get_times(rand_dom);
                     // todo - click doesn't work and radio spans accross users'
 
                     // Append user elements to the 'people' container
                     $("#people").append(
                         "<span class='user' id='" + user + rand_dom + "'>" +
-                            "<p class='h3'>" + display_name + " [" + user + "]<span class='notify loading'></span></p>" +
+                            "<p class='h3'>" + display_name + "<span class='notify loading'></span></p>" +
+                            "<p class='h6'>[" + user + "@" + computer + "]</p>" +
                             "<span class='time_wrapper'>" +
                                 "Weekly Limit: <span class='time week_total'>...</span><br/>" +
                                 "<div class='progress'>" +
@@ -406,9 +409,15 @@
                                                 "<input type='radio' class='btn-check' id='monthly" + rand_dom + "' value='monthly' name='timeframe' />" +
                                                 "<label class='btn btn-outline-primary' for='monthly" + rand_dom + "'>Monthly</label>" +
                                             "</div>" +
-                                            "<div class='btn-group' role='group' aria-label='Times'>" +
-                                                times +
+                                            "<div class='btn-group' role='group' aria-label='Time Slider'>" +
+                                                "<div class='btn btn-outline-primary'>" +
+                                                    "<span id='slider-time-value" + rand_dom + "'>1 min</span>" + 
+                                                    "<input type='range' class='form-range' id='seconds" +  rand_dom + "' name='seconds' min='60' max='7200' step='60' value='60' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
+                                                "</div>" +
                                             "</div>" +
+                                            //"<div class='btn-group' role='group' aria-label='Times'>" + 
+                                            //    times +
+                                            //"</div>" +
                                             "<div class='btn-group' role='group' aria-label='save'>" +
                                                 "<button class='btn btn-outline-primary save_me' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
                                             "</div> " +
@@ -436,15 +445,21 @@
             });
         });
 
-        function get_times(rand_dom){
-            const second_options = [60, 300, 1800, 2700, 3600];
-            let times = '';
-            $.each(second_options, function (index, seconds) {
-                times = times + "<input type='radio'  class='btn-check'  value='" + seconds + "' id='" + seconds +  rand_dom + "' name='seconds' />" +
-                    "<label  class='btn btn-outline-primary' for='" + seconds  +  rand_dom +  "'>" + secondsToHms(seconds) + "</label>";
-            });
-            return times;
+//        function get_times(rand_dom){
+//            const second_options = [60, 300, 1800, 2700, 3600];
+//            let times = '';
+//            $.each(second_options, function (index, seconds) {
+//                times = times + "<input type='radio'  class='btn-check'  value='" + seconds + "' id='" + seconds +  rand_dom + "' name='seconds' />" +
+//                    "<label  class='btn btn-outline-primary' for='" + seconds  +  rand_dom +  "'>" + secondsToHms(seconds) + "</label>";
+//            });
+//            return times;
+//        }
+
+        function updateSliderValue(value, rand_dom) {
+            var minutes = value / 60;
+            $('#slider-time-value' + rand_dom).text(minutes + ' min');
         }
+
         function uuidv4() {
             return 'xxxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -457,7 +472,7 @@
                 const computer = $( this ).attr('computer');
                 const action = $( '#' + user + rand_dom + ' input[name="action"]:checked').val();
                 const timeframe = $( '#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
-                const seconds = $( '#' + user + rand_dom + ' input[name="seconds"]:checked').val();
+                const seconds = $( '#' + user + rand_dom + ' input[name="seconds"]').val();
                 console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
                 if(action !== undefined && seconds !== undefined && timeframe !== undefined){
                     $('input').prop('checked', false);
