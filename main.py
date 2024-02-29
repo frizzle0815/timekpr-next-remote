@@ -22,7 +22,7 @@ background_service_event = threading.Event()
 
 default_user_settings = {
     'background_service': 'false',
-    'option2': 'true',
+    'show_time_change': 'true',
     'option3': 'false',
 }
 
