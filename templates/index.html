@@ -422,6 +422,14 @@
                                             "<div class='btn-group' role='group' aria-label='save'>" +
                                                 "<button class='btn btn-outline-primary save_me' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
                                             "</div> " +
+                                            "<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
+                                              "<div class='card-header'>" +
+                                                  "Time Change History [last 10]" +
+                                              "</div>" +
+                                              "<ul class='list-group list-group-flush p-1' id='time-change-list-" + user + rand_dom + "'>" +
+                                                  // Populated by script
+                                              "</ul>" +
+                                          "</div>" +
                                         "</div>" +
                                     "</div>" +
                                 "</div>" +
@@ -435,12 +443,26 @@
                     $('#' + user + rand_dom + ' .btn').addClass("disabled");
                     $('#' + user  + rand_dom + ' .btn-check').addClass("disabled");
 
-                    // Set interval for loading animation
-                    setInterval(function () {
-                        $('#' + user  + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
+                    // Start loading animation
+                    var loadingInterval = setInterval(function() {
+                        $('#' + user + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
                     }, 1400);
-                    $.getJSON( "/get_database/" + computer + "/" + user, function( usage ) {
+
+                    // Load user data
+                    $.getJSON("/get_database/" + computer + "/" + user, function(usage) {
+                        // Data has been loaded, stop the loading animation
+                        clearInterval(loadingInterval);
+                        // Hide the loading element
+                        $('#' + user + rand_dom + " .loading").stop(true, true).hide();
+
+                        // Enable buttons and render user data
+                        $('#' + user + rand_dom + ' .btn').removeClass("disabled");
+                        $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
                         render_user_to_dom(user, computer, usage, rand_dom);
+                    }).fail(function() {
+                        // If there's an error loading the data, stop the loading animation
+                        clearInterval(loadingInterval);
+                        $('#' + user + rand_dom + " .notify").html("Error loading data.");
                     });
                 });
             });
@@ -535,11 +557,59 @@
                 $('#' + user + rand_dom + ' .btn').removeClass("disabled");
                 $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
                 add_click_handler(user, rand_dom);
+
+                // Check if time_changes data is available and render it
+                var timeChangeListHtml = '';
+
+                if(usage.time_changes && Object.keys(usage.time_changes).length > 0) {
+                    // Erstellen Sie ein Array aus den Schlüsseln von time_changes
+                    var changesArray = Object.keys(usage.time_changes).map(function(key) {
+                        var timestamp = key.split('_').pop();
+                        var details = parseChangeDetails(usage.time_changes[key]);
+                        return {
+                            timestamp: timestamp,
+                            action: details.action,
+                            minutes: details.minutes,
+                            timeframe: details.timeframe,
+                            status: details.status
+                        };
+                    });
+
+                    // Sortieren Sie das Array basierend auf dem Zeitstempel in absteigender Reihenfolge
+                    changesArray.sort(function(a, b) {
+                        return b.timestamp.localeCompare(a.timestamp);
+                    });
+
+                    // Bauen Sie die HTML-Liste mit den sortierten Einträgen
+                    changesArray.forEach(function(change) {
+                        var listItem = `<li class='list-group-item'>${change.action} ${change.minutes} mins (${change.timeframe}) - ${change.status}</li>`;
+                        timeChangeListHtml += listItem;
+                    });
+                } else {
+                    // If there are no time changes, display a message
+                    timeChangeListHtml = "<li class='list-group-item'>No time changes yet</li>";
+                }
+                  // Append the time change history to the corresponding list in the HTML
+                $('#time-change-list-' + user + rand_dom).html(timeChangeListHtml);
+
             } else {
                 // Error Notification
                 $('#' + user + rand_dom + " .time_wrapper").html(computer + " failed. Off? Bad Auth?");
                 $('#' + user + rand_dom + " .notify").addClass("error").html("Error");
             }
+        }
+
+        // Function to extract time_change details
+        function parseChangeDetails(changeValue) {
+            var details = changeValue.split(',');
+            var minutes = parseInt(details[1], 10) / 60;
+            var actionSymbol = details[0] === 'add' ? '+' : (details[0] === 'remove' ? '-' : details[0]);
+            return {
+                action: actionSymbol,
+                minutes: parseInt(minutes, 10),
+                timeframe: details[2],
+                status: details[3]
+            };
         }
 
         function get_buttons(user, computer, state = 'enabled'){

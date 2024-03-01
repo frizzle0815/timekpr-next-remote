@@ -274,6 +274,11 @@ def get_database(user, computer):
     if 'error_message' in locals():
         usage['error'] = error_message
 
+    # Read the entire "time_changes" section
+    if 'time_changes' in database.sections():
+        time_changes = {k: v for k, v in database.items('time_changes') if k.startswith(f"{computer}_{user}_")}
+        usage['time_changes'] = time_changes
+
     return usage
 
 ##### Update Web Frontend End ##### 
@@ -308,7 +313,7 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
                                if key.startswith(f"{computer}_{user}_") and not value.endswith("pending")]
         # Sort non-pending changes by timestamp (assuming the timestamp is at the end of the key)
         non_pending_changes.sort(key=lambda x: x.split('_')[-1], reverse=True)
-        # Remove entries beyond the 5th one
+        # Remove entries beyond the 10th one
         for old_change in non_pending_changes[10:]:
             database.remove_option('time_changes', old_change)
 
