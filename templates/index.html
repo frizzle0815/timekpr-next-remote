@@ -240,64 +240,64 @@
       <div id="people"></div> <!-- Populated by script -->
     </div>
 
-<!-- History Tab Pane -->
-<div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
-  <br>
-  {% if database.time_changes %}
-    {% set history_data = namespace(data={}) %}
-    <!-- Organize data by computer_user -->
-    {% for key, value in database.time_changes.items() %}
-      {% set parts = key.split('_') %}
-      {% set computer_user = parts[0] ~ '_' ~ parts[1] %}
-      {% if computer_user not in history_data.data %}
-        {% set _dummy = history_data.data.update({computer_user: []}) %}
-      {% endif %}
-      {% set details = value.split(',') %}
-      {% set _dummy = history_data.data[computer_user].append({
-        'action': details[0],
-        'seconds': details[1],
-        'timeframe': details[2],
-        'status': details[3],
-        'timestamp': parts[2]
-      }) %}
-    {% endfor %}
+  <!-- History Tab Pane -->
+  <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+    <br>
+    {% if database.time_changes %}
+      {% set history_data = namespace(data={}) %}
+      <!-- Organize data by computer_user -->
+      {% for key, value in database.time_changes.items() %}
+        {% set parts = key.split('_') %}
+        {% set computer_user = parts[0] ~ '_' ~ parts[1] %}
+        {% if computer_user not in history_data.data %}
+          {% set _dummy = history_data.data.update({computer_user: []}) %}
+        {% endif %}
+        {% set details = value.split(',') %}
+        {% set _dummy = history_data.data[computer_user].append({
+          'action': details[0],
+          'seconds': details[1],
+          'timeframe': details[2],
+          'status': details[3],
+          'timestamp': parts[2]
+        }) %}
+      {% endfor %}
 
-    <!-- Create a table for each computer_user -->
-    {% for computer_user, changes in history_data.data.items() %}
-      <h3>{{ computer_user.replace('_', ' - ') }}</h3>
-      <table class="table table-striped table-hover">
-        <thead class="table-dark">
-          <tr>
-            <th scope="col">Timestamp</th>
-            <th scope="col">Action</th>
-            <th scope="col">Seconds</th>
-            <th scope="col">Timeframe</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if changes %}
-            {% for change in changes %}
-              <tr>
-                <td>{{ change.timestamp | format_timestamp }}</td>
-                <td>{{ change.action }}</td>
-                <td>{{ change.seconds }}</td>
-                <td>{{ change.timeframe }}</td>
-                <td>{{ change.status }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+      <!-- Create a table for each computer_user -->
+      {% for computer_user, changes in history_data.data.items() %}
+        <h3>{{ computer_user.replace('_', ' - ') }}</h3>
+        <table class="table table-striped table-hover">
+          <thead class="table-dark">
             <tr>
-              <td colspan="4" class="text-center">Empty</td>
+              <th scope="col">Timestamp</th>
+              <th scope="col">Action</th>
+              <th scope="col">Seconds</th>
+              <th scope="col">Timeframe</th>
+              <th scope="col">Status</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    {% endfor %}
-  {% else %}
-    <p>No time changes yet.</p>
-  {% endif %}
-</div>
+          </thead>
+          <tbody>
+            {% if changes %}
+              {% for change in changes %}
+                <tr>
+                  <td>{{ change.timestamp | format_timestamp }}</td>
+                  <td>{{ change.action }}</td>
+                  <td>{{ change.seconds }}</td>
+                  <td>{{ change.timeframe }}</td>
+                  <td>{{ change.status }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" class="text-center">Empty</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      {% endfor %}
+    {% else %}
+      <p>No time changes yet.</p>
+    {% endif %}
+  </div>
 
     <!-- Database Area -->
     <div class="tab-pane fade" id="database" role="tabpanel" aria-labelledby="database-tab">
@@ -332,7 +332,7 @@
     <!-- Take care: variables are case-senstive!-->
     <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
       <br>
-<!--       <div class="form-check form-switch">
+    <!--  <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="background_service" name="background_service" {% if database['settings']['background_service'] == 'true' %}checked{% endif %} onchange="updateSetting('background_service', this.checked ? 'true' : 'false')">
         <label class="form-check-label" for="background_service">Background Service</label>
       </div> -->
@@ -357,7 +357,25 @@
       <span id="status-background_service">
         <!-- Updated by script -->
       </span>
-  </label>
+    </label>
+  </div>
+
+  <!-- Modal for PIN input -->
+  <div class="modal" id="pinModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Enter PIN</h5>
+        </div>
+        <div class="modal-body">
+          <input type="password" id="pinInput" class="form-control" placeholder="Enter PIN">
+          <div id="pinError" style="display: none; color: red;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="submitPin">Submit</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -366,13 +384,16 @@
     <script src="{{ url_for('static', filename='bootstrap.5.1.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='jquery-3.6.3.min.js') }}"></script>
     <script>
+        let pinCode = null;
+        let isPinVerified = false;
+
         $.getJSON( "/config", function( data ) {
-            $.each( data, function( computer, userArrays ) {
+            pinCode = data.pin_code ? data.pin_code.toString() : null;
+            $.each( data.trackme, function( computer, userArrays ) {
                 $.each(userArrays, function(index, userArray) {
                     let rand_dom = '_' + uuidv4();
                     let user = userArray[0];
                     let display_name = userArray[1];
-                    //let times = get_times(rand_dom);
                     // todo - click doesn't work and radio spans accross users'
 
                     // Append user elements to the 'people' container
@@ -472,16 +493,6 @@
             });
         });
 
-//        function get_times(rand_dom){
-//            const second_options = [60, 300, 1800, 2700, 3600];
-//            let times = '';
-//            $.each(second_options, function (index, seconds) {
-//                times = times + "<input type='radio'  class='btn-check'  value='" + seconds + "' id='" + seconds +  rand_dom + "' name='seconds' />" +
-//                    "<label  class='btn btn-outline-primary' for='" + seconds  +  rand_dom +  "'>" + secondsToHms(seconds) + "</label>";
-//            });
-//            return times;
-//        }
-
         function updateSliderValue(value, rand_dom) {
             var minutes = value / 60;
             $('#slider-time-value' + rand_dom).text(minutes + ' min');
@@ -494,26 +505,32 @@
             });
         }
 
-        function add_click_handler(user, rand_dom){
-            $("#" + user + rand_dom + " .save_me" ).click(function() {
-                const computer = $( this ).attr('computer');
-                const action = $( '#' + user + rand_dom + ' input[name="action"]:checked').val();
-                const timeframe = $( '#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
-                const seconds = $( '#' + user + rand_dom + ' input[name="seconds"]').val();
-                console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
-                if(action !== undefined && seconds !== undefined && timeframe !== undefined){
-                    $('input').prop('checked', false);
-                    add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom);
-                    // Collapse accordion
-                    $('#collapse' + rand_dom).collapse('hide'); 
-                    // Show Updated Notification
-                    $( '#' + user + rand_dom + ' .notify').html('Update queued!').fadeIn(function() {
-                        setTimeout(function() {
-                            $('#' + user + rand_dom + ' .notify').fadeOut("slow");
-                        }, 1000);
-                    });
+        function add_click_handler(user, rand_dom) {
+            $("#" + user + rand_dom + " .save_me").click(function() {
+                // Check if PIN is necessary or already verified
+                if (pinCode === null || isPinVerified) {
+                    const computer = $(this).attr('computer');
+                    const action = $('#' + user + rand_dom + ' input[name="action"]:checked').val();
+                    const timeframe = $('#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
+                    const seconds = $('#' + user + rand_dom + ' input[name="seconds"]').val();
+                    console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
+                    if (action !== undefined && seconds !== undefined && timeframe !== undefined) {
+                        $('input').prop('checked', false);
+                        add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom);
+                        // Collapse accordion
+                        $('#collapse' + rand_dom).collapse('hide');
+                        // Show Updated Notification
+                        $('#' + user + rand_dom + ' .notify').html('Update queued!').fadeIn(function() {
+                            setTimeout(function() {
+                                $('#' + user + rand_dom + ' .notify').fadeOut("slow");
+                            }, 1000);
+                        });
+                    } else {
+                        alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
+                    }
                 } else {
-                    alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
+                    // Show pinModal if PIN is not verified
+                    $('#pinModal').modal('show');
                 }
             });
         }
@@ -598,6 +615,56 @@
                 $('#' + user + rand_dom + " .notify").addClass("error").html("Error");
             }
         }
+
+        // #### PIN Section START ####
+
+        $(document).ready(function() {
+            // Event-Handler for Opening Accordion
+            $("#people").on("click", ".accordion-button", function() {
+                if (!isPinVerified && pinCode) {
+                    $('#pinModal').modal('show');
+                    return false;
+                }
+            });
+
+            // Event-Handler for Modal
+            $('#pinModal').on('shown.bs.modal', function() {
+                $('#pinInput').focus();
+            });
+
+            // Function to verify the PIN
+            function verifyPin() {
+                const enteredPin = $('#pinInput').val();
+                if (enteredPin === pinCode) {
+                    isPinVerified = true;
+                    $('#pinModal').modal('hide');
+                } else {
+                    // Display an error message in the modal
+                    $('#pinError').text('Incorrect PIN').show();
+                    $('#pinInput').val(''); // Clear the input
+                    // Close the modal after a short delay
+                }
+            }
+
+            // Event-Handler for Submitting PIN
+            $('#submitPin').click(verifyPin);
+            $('#pinInput').on('keypress', function(e) {
+                if (e.which === 13) { // Enter-key pressed
+                    verifyPin();
+                }
+            });
+
+            // Event-Handler for Closing Modal
+            $('#pinModal').on('hidden.bs.modal', function() {
+                if (!isPinVerified) {
+                    // Close accordion if PIN is not verified
+                    $('.accordion-collapse').collapse('hide');
+                }
+            });
+        });
+
+        // #### PIN Section END ####
+
 
         // Function to extract time_change details
         function parseChangeDetails(changeValue) {
@@ -732,6 +799,8 @@
           updateSetting('background_service', isBackgroundServiceEnabled ? 'true' : 'false');
           updateStatusIcon();
         });
+
+
 
     </script>
 

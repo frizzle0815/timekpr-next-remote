@@ -118,7 +118,11 @@ def stop_background_service():
 ##### Update Timekpr Userinfo Start ##### 
 
 def get_config():
-    return conf.trackme
+    config_data = {
+        'trackme': conf.trackme,
+        'pin_code': conf.pin_code
+    }
+    return config_data
 
 def get_connection(computer):
 
