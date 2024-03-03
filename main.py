@@ -120,9 +120,13 @@ def stop_background_service():
 def get_config():
     config_data = {
         'trackme': conf.trackme,
-        'pin_code': conf.pin_code
+        'pin_required': conf.pin_required
     }
     return config_data
+
+def verify_pin(pin_provided):
+    stored_pin = conf.pin_code
+    return pin_provided == stored_pin
 
 def get_connection(computer):
 

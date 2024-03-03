@@ -5,12 +5,14 @@ from flask import Flask, render_template, request, jsonify, send_from_directory 
 import configparser  # Used for reading and writing 'database.ini' within the update_settings function
 import os  # Used to locate the 'favicon.ico' file within the static directory
 from datetime import datetime # Used to format timestamps
+from conf import pin_required, pin_code
 
 app = Flask(__name__)
 
 @app.route("/config")
 def config():
-    return main.get_config()
+    config_data = main.get_config()
+    return jsonify(config_data)
 
 @app.route("/get_database/<computer>/<user>")
 def get_database(computer, user):
@@ -45,6 +47,9 @@ def get_database(computer, user):
 def queue_time_change():
     try:
         data = request.form
+        if pin_required:
+            if 'pin' not in data or data['pin'] != pin_code:
+                return jsonify({'error': 'Invalid PIN'}), 403
         user = data['user']
         computer = data['computer']
         action = data['action']
@@ -132,4 +137,18 @@ def index():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
         'favicon.ico',mimetype='image/vnd.microsoft.icon')
+
+@app.route('/verify_pin', methods=['POST'])
+def verify_pin_route():
+    pin_provided = request.form.get('pin')
+    if not pin_provided:
+        return jsonify({'result': 'fail', 'message': 'No PIN provided'}), 400
+    
+    # Call the function from main.py to verify the PIN
+    is_valid_pin = main.verify_pin(pin_provided)
+    
+    if is_valid_pin:
+        return jsonify({'result': 'success', 'message': 'PIN is correct'}), 200
+    else:
+        return jsonify({'result': 'fail', 'message': 'Incorrect PIN'}), 403
 

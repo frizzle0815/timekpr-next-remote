@@ -5,7 +5,8 @@ ssh_user = 'timekpr-next-remote'
 ssh_password = 'timekpr-next-remote'
 ssh_timekpra_bin = '/usr/bin/timekpra'
 ssh_key = './id_timekpr'
-pin_code = '123456' # prevents unauthorized time changes; leave empty to disable
+pin_required = True # prevents unauthorized time changes; Set False to disable
+pin_code = '1234'
 
 
 # Examples
