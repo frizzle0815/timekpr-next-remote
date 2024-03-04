@@ -296,6 +296,7 @@ def get_database(user, computer):
 def queue_time_change(user, computer, action, seconds, timeframe, status='pending'):
     database = configparser.ConfigParser()
     database.read('database.ini')
+    result = "queued"
 
     try:
         # Check if a section for Time Changes exists, if not create it
@@ -334,16 +335,18 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
         ssh = get_connection(computer)
         if ssh:
             process_pending_time_changes(computer, ssh)
+            result = "success" if success else "fail"
         else:
             print("No connection at the moment. Time changes will be sent later.")
 
     except Exception as e:
         print(f"An error occurred while updating the database.ini file: {e}")
-        # Handle the error, possibly restoring from a backup or retrying the operation
+    return result # "queued" when no ssh connection, "success" when successful, "fail" when failed
 
 def process_pending_time_changes(computer, ssh):
     database = configparser.ConfigParser()
     database.read('database.ini')
+    overall_success = True
 
     if 'time_changes' in database.sections():
         for key, value in database.items('time_changes'):
@@ -368,6 +371,8 @@ def process_pending_time_changes(computer, ssh):
         # Write the changes back to database.ini file if any changes were made
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
+
+    return overall_success # Return True if all changes were successful, False otherwise
 
 def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
     # Read the current limits from the database.ini file

@@ -57,13 +57,14 @@ def queue_time_change():
         timeframe = data['timeframe']
         status = data['status']
         
-        # Save to database.ini with status 'pending'
-        main.queue_time_change(user, computer, action, seconds, timeframe, status)
-        return {'result': "queued"}, 200
+        # Call the queue_time_change function and get the result
+        result = main.queue_time_change(user, computer, action, seconds, timeframe, status)
+        
+        # Return the result to the frontend
+        return jsonify({'result': result}), 200
     except Exception as e:
         print("Error processing request:", e)
-        # Hier können Sie eine detailliertere Fehlermeldung zurückgeben
-        return {'error': str(e)}, 400
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/update_settings', methods=['POST'])
 def update_settings():

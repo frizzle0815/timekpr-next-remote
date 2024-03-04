@@ -507,7 +507,7 @@
         }
 
         function add_click_handler(user, rand_dom) {
-            $("#" + user + rand_dom + " .save_me").click(function() {
+            $("#" + user + rand_dom + " .save_me").off('click').click(function() { // added .off('click') to prevent multiple click handlers
                 // Check if PIN is necessary and already verified
                 if (isPinRequired && !isPinVerified) {
                     // Show pinModal if PIN is not verified
@@ -713,17 +713,35 @@
                 type: 'POST',
                 data: data,
                 success: function(response) {
-                    // Handle success
-                    displayMessage('Time change queued: ' + response.result);
+                    // Handle different results based on the response
+                    if (response.result === "queued" || response.result === "success") {
+                        displayMessage('Time change ' + response.result);
+                        // Call the get_database route and execute render_user_to_dom
+                        $.getJSON("/get_database/" + computer + "/" + user, function(usage) {
+                            render_user_to_dom(user, computer, usage, rand_dom);
+                        }).fail(function() {
+                            displayMessage('Error loading data.');
+                        });
+                    } else if (response.result === "fail") {
+                        displayMessage('Error processing time change.');
+                    }
                 },
                 error: function(error) {
                     // Handle error
                     displayMessage('Error queuing time change: ' + error.responseText);
                 }
             });
+        }
 
-            // Display the variables that were sent
-            displayMessage('Variables sent: User=' + user + ', Computer=' + computer + ', Action=' + action + ', Seconds=' + seconds + ', Timeframe=' + timeframe);
+        function loadUserDataAndUpdateDOM(computer, user, rand_dom) {
+            // Load user data
+            $.getJSON("/get_database/" + computer + "/" + user, function(usage) {
+                // Data has been loaded, update the DOM
+                render_user_to_dom(user, computer, usage, rand_dom);
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                // If there's an error loading the data, display an error message
+                displayMessage('Error loading data: ' + textStatus);
+            });
         }
 
         function displayMessage(message) {
