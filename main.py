@@ -45,6 +45,8 @@ default_usage = {
     'ACTUAL_TIME_LEFT_CONTINUOUS': '0',
     'ACTUAL_PLAYTIME_LEFT_DAY': '0',
     'ACTUAL_ACTIVE_PLAYTIME_ACTIVITY_COUNT': '0',
+    'PLAYTIME_ENABLED': True,
+    'PLAYTIME_LIMIT_OVERRIDE_ENABLED': False,
 }
 
 # Initialize the configparser
@@ -79,9 +81,7 @@ def check_connection():
         config = configparser.ConfigParser()
         config.read('database.ini')
         
-        trackme_config = get_config()
-        
-        for computer, userArrays in trackme_config.items():
+        for computer, userArrays in conf.trackme.items():
             for users in userArrays:  # More than one user on one device
                 user = users[0]  # Use only first value in array = use user and ignore display_name
                 ssh = None
@@ -244,6 +244,8 @@ def get_database(user, computer):
     month_limit = database.getint(section_name, 'LIMIT_PER_MONTH', fallback=0)
     week_left = week_limit - week_spent
     month_left = month_limit - month_spent
+    playtime_enabled = database.getboolean(section_name, 'PLAYTIME_ENABLED', fallback=False)
+    playtime_limit_override_enabled = database.getboolean(section_name, 'PLAYTIME_LIMIT_OVERRIDE_ENABLED', fallback=False)
     
     # Calculate last_seen
     last_seen = ""
@@ -282,8 +284,12 @@ def get_database(user, computer):
         'playtime_spent': playtime_spent,
         'week_left': week_left,
         'week_spent': week_spent,
+        'week_limit': week_limit,
         'month_left': month_left,
         'month_spent': month_spent,
+        'month_limit': month_limit,
+        'playtime_enabled': playtime_enabled,
+        'playtime_limit_override_enabled': playtime_limit_override_enabled,
         'result': 'success'
     }
 
