@@ -427,7 +427,8 @@ def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
     timeframe_flags = {
         'daily': '--settimeleft',
         'weekly': '--settimelimitweek',
-        'monthly': '--settimelimitmonth'
+        'monthly': '--settimelimitmonth',
+        'playtime': '--setplaytimeleft'
     }
     command_flag = timeframe_flags.get(timeframe)
 

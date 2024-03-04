@@ -439,27 +439,29 @@
                                     "<div id='collapse" + rand_dom + "' class='accordion-collapse collapse' aria-labelledby='heading" + rand_dom + "' data-bs-parent='#accordion'>" +
                                       "<div class='accordion-body'>" +
                                             "<div class='btn-group' role='group' aria-label='Action'>" +
-                                                "<input type='radio' class='btn-check' id='add" + rand_dom + "' value='add' name='action' />" +
-                                                "<label class='btn btn-outline-primary' for='add" + rand_dom + "'>Add</label>" +
-                                                "<input type='radio' class='btn-check' id='remove" + rand_dom + "' value='remove' name='action' />" +
-                                                "<label class='btn btn-outline-primary' for='remove" + rand_dom + "'>Remove</label> " +
+                                                "<input type='radio' class='btn-check disabled' id='add" + rand_dom + "' value='add' name='action' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='add" + rand_dom + "'>Add</label>" +
+                                                "<input type='radio' class='btn-check disabled' id='remove" + rand_dom + "' value='remove' name='action' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='remove" + rand_dom + "'>Remove</label> " +
                                             "</div> " +
                                             "<div class='btn-group' role='group' aria-label='Timeframe'>" +
-                                                "<input type='radio' class='btn-check' id='daily" + rand_dom + "' value='daily' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary' for='daily" + rand_dom + "'>Daily</label>" +
-                                                "<input type='radio' class='btn-check' id='weekly" + rand_dom + "' value='weekly' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary' for='weekly" + rand_dom + "'>Weekly</label>" +
-                                                "<input type='radio' class='btn-check' id='monthly" + rand_dom + "' value='monthly' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary' for='monthly" + rand_dom + "'>Monthly</label>" +
+                                                "<input type='radio' class='btn-check disabled' id='daily" + rand_dom + "' value='daily' name='timeframe' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='daily" + rand_dom + "'>Daily</label>" +
+                                                "<input type='radio' class='btn-check disabled' id='weekly" + rand_dom + "' value='weekly' name='timeframe' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='weekly" + rand_dom + "'>Weekly</label>" +
+                                                "<input type='radio' class='btn-check disabled' id='monthly" + rand_dom + "' value='monthly' name='timeframe' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='monthly" + rand_dom + "'>Monthly</label>" +
+                                                "<input type='radio' class='btn-check disabled' id='playtime" + rand_dom + "' value='playtime' name='timeframe' />" +
+                                                "<label class='btn btn-outline-primary disabled' for='playtime" + rand_dom + "'>Playtime</label>" +
                                             "</div>" +
                                             "<div class='btn-group' role='group' aria-label='Time Slider'>" +
-                                                "<div class='btn btn-outline-primary'>" +
+                                                "<div class='btn btn-outline-primary disabled'>" +
                                                     "<span id='slider-time-value" + rand_dom + "'>15 min</span>" + 
-                                                    "<input type='range' class='form-range' id='seconds" +  rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
+                                                    "<input type='range' class='form-range disabled' id='seconds" +  rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
                                                 "</div>" +
                                             "</div>" +
                                             "<div class='btn-group' role='group' aria-label='save'>" +
-                                                "<button class='btn btn-outline-primary save_me' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
+                                                "<button class='btn btn-outline-primary save_me disabled' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
                                             "</div> " +
                                             "<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
                                               "<div class='card-header'>" +
@@ -478,8 +480,6 @@
 
                     // Show loading message and disable buttons
                     $('#' + user  + rand_dom + " .notify").show().html("Loading...");
-                    $('#' + user + rand_dom + ' .btn').addClass("disabled");
-                    $('#' + user  + rand_dom + ' .btn-check').addClass("disabled");
 
                     // Start loading animation
                     var loadingInterval = setInterval(function() {
@@ -493,9 +493,12 @@
                         // Hide the loading element
                         $('#' + user + rand_dom + " .loading").stop(true, true).hide();
 
-                        // Enable buttons and render user data
-                        $('#' + user + rand_dom + ' .btn').removeClass("disabled");
-                        $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
+                        // Disallow time changes until first valid connection
+                        if (usage.last_seen !== "Never") {
+                            $('#' + user + rand_dom + ' .btn').removeClass("disabled");
+                            $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
+                            $('#' + user + rand_dom + ' .form-range').removeClass("disabled");
+                        }
                         render_user_to_dom(user, computer, usage, rand_dom);
                         add_click_handler(user, rand_dom);
                     }).fail(function() {
@@ -565,6 +568,52 @@
                         $('#' + user + rand_dom + ' .notify').fadeOut("slow");
                     }, 1000);
                 });
+
+                // Show only necessary data
+                var currentDate = new Date();
+                var currentYear = currentDate.getFullYear();
+                var currentMonth = currentDate.getMonth();
+                var daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                var secondsInMonth = daysInMonth * 24 * 60 * 60; // Calculate maximum seconds of current month
+
+                var showWeekly = usage.week_limit < 604800; // show weekly if there is a limit smaller than maximum seconds per week
+                var showMonthly = usage.month_limit < secondsInMonth; // show monthly if there is a limit smaller than maximum seconds per month
+                var showPlaytime = usage.playtime_enabled === true && usage.playtime_limit_override_enabled !== true; // show playtime if enabled and not overriden
+
+                $('#' + user + rand_dom + " .daily-wrapper").slideDown(); // always show daily
+
+                if (showWeekly) {
+                    $('#' + user + rand_dom + " .weekly-wrapper").slideDown();
+                    $('label[for="weekly' + rand_dom + '"]').show();
+                } else {
+                    $('#' + user + rand_dom + " .weekly-wrapper").slideUp(); // hide progressbar
+                    $('label[for="weekly' + rand_dom + '"]').hide(); // hide formular button
+                }
+
+                if (showMonthly) {
+                    $('#' + user + rand_dom + " .monthly-wrapper").slideDown();
+                    $('label[for="monthly' + rand_dom + '"]').show();
+                } else {
+                    $('#' + user + rand_dom + " .monthly-wrapper").slideUp(); // hide progressbar
+                    $('label[for="monthly' + rand_dom + '"]').hide(); // hide formular button
+                }
+
+                if (showPlaytime) {
+                    $('#' + user + rand_dom + " .playtime-wrapper").slideDown();
+                    $('label[for="playtime' + rand_dom + '"]').show();
+                } else {
+                    $('#' + user + rand_dom + " .playtime-wrapper").slideUp(); // hide progressbar
+                    $('label[for="playtime' + rand_dom + '"]').hide(); // hide formular button
+                }
+
+                if (!showWeekly && !showMonthly && !showPlaytime) {
+                    // Hide daily as well if no other button has to be shown
+                    $('label[for="daily' + rand_dom + '"]').hide();
+                    $('#daily' + rand_dom).prop('checked', true); // always send daily in this case
+                } else {
+                    $('label[for="daily' + rand_dom + '"]').show();
+                }
+
                 // Calculation for ProgressBar
                 var timeTotal = usage.time_spent + usage.time_left;
                 var playtimeTotal = usage.playtime_spent + usage.playtime_left;
@@ -617,34 +666,6 @@
                 } else {
                     statusElement.text('Offline').css('color', '#8B0000');
                     allProgressBars.removeClass('progress-bar-striped progress-bar-animated');
-                }
-
-                // Show only necessary data
-                $('#' + user + rand_dom + " .daily-wrapper").slideDown();
-
-                if (usage.week_limit < 604800) { // there is a limit smaller than maximum seconds per week
-                    $('#' + user + rand_dom + " .weekly-wrapper").slideDown();
-                } else {
-                    $('#' + user + rand_dom + " .weekly-wrapper").slideUp();
-                }
-
-                // Calculate maximum seconds per month
-                var currentDate = new Date();
-                var currentYear = currentDate.getFullYear();
-                var currentMonth = currentDate.getMonth();
-                var daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-                var secondsInMonth = daysInMonth * 24 * 60 * 60; 
-
-                if (usage.month_limit < secondsInMonth) { // there is a limit smaller than maximum seconds per actual month
-                    $('#' + user + rand_dom + " .monthly-wrapper").slideDown();
-                } else {
-                    $('#' + user + rand_dom + " .monthly-wrapper").slideUp();
-                }
-
-                if (usage.playtime_enabled === true && usage.playtime_limit_override_enabled !== true) { // playtime enabled but override must be disabled
-                    $('#' + user + rand_dom + " .playtime-wrapper").slideDown();
-                } else {
-                    $('#' + user + rand_dom + " .playtime-wrapper").slideUp();
                 }
 
                 // Remove "Loading"
