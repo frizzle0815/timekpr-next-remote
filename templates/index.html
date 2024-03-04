@@ -481,6 +481,7 @@
                         $('#' + user + rand_dom + ' .btn').removeClass("disabled");
                         $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
                         render_user_to_dom(user, computer, usage, rand_dom);
+                        add_click_handler(user, rand_dom);
                     }).fail(function() {
                         // If there's an error loading the data, stop the loading animation
                         clearInterval(loadingInterval);
@@ -507,7 +508,7 @@
         }
 
         function add_click_handler(user, rand_dom) {
-            $("#" + user + rand_dom + " .save_me").off('click').click(function() { // added .off('click') to prevent multiple click handlers
+            $("#" + user + rand_dom + " .save_me").off('click').click(function() {
                 // Check if PIN is necessary and already verified
                 if (isPinRequired && !isPinVerified) {
                     // Show pinModal if PIN is not verified
@@ -523,15 +524,16 @@
                     if (action !== undefined && seconds !== undefined && timeframe !== undefined) {
                         $('input').prop('checked', false);
                         // Include the PIN in the function call if it's required
-                        add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom);
+                        add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom, function(message) {
+                            // Update the .notify element with the message from the callback
+                            $('#' + user + rand_dom + ' .notify').html(message).fadeIn(function() {
+                                setTimeout(function() {
+                                    $('#' + user + rand_dom + ' .notify').fadeOut("slow");
+                                }, 1000);
+                            });
+                        });
                         // Collapse accordion
                         $('#collapse' + rand_dom).collapse('hide');
-                        // Show Updated Notification
-                        $('#' + user + rand_dom + ' .notify').html('Update queued!').fadeIn(function() {
-                            setTimeout(function() {
-                                $('#' + user + rand_dom + ' .notify').fadeOut("slow");
-                            }, 1000);
-                        });
                     } else {
                         alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
                     }
@@ -573,12 +575,9 @@
                 $('#' + user + rand_dom + " .progress-bar.time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .progress-bar.week_left").html(secondsToHms(usage.week_left));
 
-                // Enable buttons and add click handler
+                // Remove "Loading"
                 $('#' + user + rand_dom + " .loading").removeClass('loading');
-                $('#' + user + rand_dom + ' .btn').removeClass("disabled");
-                $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
-                add_click_handler(user, rand_dom);
-
+                
                 // Check if time_changes data is available and render it
                 var timeChangeListHtml = '';
 
@@ -698,7 +697,7 @@
 
         }
 
-        function add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom){
+        function add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom, callback){
             const data = {
                 'user': user,
                 'computer': computer,
@@ -713,22 +712,22 @@
                 type: 'POST',
                 data: data,
                 success: function(response) {
-                    // Handle different results based on the response
+                    // Call the callback with the result message
                     if (response.result === "queued" || response.result === "success") {
-                        displayMessage('Time change ' + response.result);
+                        callback('Time change ' + response.result);
                         // Call the get_database route and execute render_user_to_dom
                         $.getJSON("/get_database/" + computer + "/" + user, function(usage) {
                             render_user_to_dom(user, computer, usage, rand_dom);
                         }).fail(function() {
-                            displayMessage('Error loading data.');
+                            callback('Error loading data.');
                         });
                     } else if (response.result === "fail") {
-                        displayMessage('Error processing time change.');
+                        callback('Error processing time change.');
                     }
                 },
                 error: function(error) {
-                    // Handle error
-                    displayMessage('Error queuing time change: ' + error.responseText);
+                    // Call the callback with the error message
+                    callback('Error queuing time change: ' + error.responseText);
                 }
             });
         }

@@ -296,7 +296,7 @@ def get_database(user, computer):
 def queue_time_change(user, computer, action, seconds, timeframe, status='pending'):
     database = configparser.ConfigParser()
     database.read('database.ini')
-    result = "queued"
+    result = "fail"  # Default to fail, will be updated based on the operation
 
     try:
         # Check if a section for Time Changes exists, if not create it
@@ -317,6 +317,17 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
         # Include the timeframe in the value
         database.set('time_changes', change_key, f"{action},{seconds},{timeframe},{status}")
 
+        # Attempt to establish an SSH connection and apply the time change immediately
+        ssh = get_connection(computer)
+        if ssh:
+            # If SSH connection is successful, process the time change
+            success = process_pending_time_changes(computer, ssh)
+            result = "success" if success else "fail"
+        else:
+            # If SSH connection cannot be established, queue the time change
+            result = "queued"
+            print("No connection at the moment. Time changes will be sent later.")
+
         # Clean up non-pending entries to keep only the last 10 for this user
         non_pending_changes = [key for key, value in database.items('time_changes')
                                if key.startswith(f"{computer}_{user}_") and not value.endswith("pending")]
@@ -330,17 +341,11 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
         with open('database.ini', 'w') as configfile:
             database.write(configfile)
 
-        print(f"Time change queued for {user} on {computer}: {action} {seconds} seconds ({timeframe})")
-
-        ssh = get_connection(computer)
-        if ssh:
-            process_pending_time_changes(computer, ssh)
-            result = "success" if success else "fail"
-        else:
-            print("No connection at the moment. Time changes will be sent later.")
+        print(f"Time change result for {user} on {computer}: {result}")
 
     except Exception as e:
         print(f"An error occurred while updating the database.ini file: {e}")
+
     return result # "queued" when no ssh connection, "success" when successful, "fail" when failed
 
 def process_pending_time_changes(computer, ssh):
