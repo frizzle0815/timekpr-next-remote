@@ -23,9 +23,11 @@ def get_database(computer, user):
 
     # Attempt to establish an SSH connection
     ssh = None
+    ssh_success = False  # Initialize a flag to track SSH connection success
     try:
         ssh = main.get_connection(computer)
         if ssh:
+            ssh_success = True  # Set the flag to True if SSH connection is successful
             # If the connection is successful, update user info
             main.process_pending_time_changes(computer, ssh)
             main.update_userinfo(ssh, computer, user)
@@ -39,9 +41,10 @@ def get_database(computer, user):
         if ssh:
             ssh.close()
 
-    usage = main.get_database(user, computer) # Get usage data, either from the updated info or from saved data
+    usage = main.get_database(user, computer)  # Get usage data, either from the updated info or from saved data
+    usage['online_status'] = 'Online' if ssh_success else 'Offline'  # Add the online status to the usage data
     print(f"{__file__} {__name__}: {usage}")
-    return usage, 200
+    return jsonify(usage), 200
 
 @app.route("/queue_time_change", methods=['POST'])
 def queue_time_change():
