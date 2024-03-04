@@ -236,9 +236,14 @@ def get_database(user, computer):
     timestamp = database.get(section_name, 'TIMESTAMP', fallback='Never')
     time_left = database.getint(section_name, 'ACTUAL_TIME_LEFT_DAY', fallback=0)
     time_spent = database.getint(section_name, 'ACTUAL_TIME_SPENT_DAY', fallback=0)
+    playtime_left = database.getint(section_name, 'ACTUAL_PLAYTIME_LEFT_DAY', fallback=0)
+    playtime_spent = database.getint(section_name, 'PLAYTIME_SPENT_DAY', fallback=0)
     week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
     week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
+    month_spent = database.getint(section_name, 'TIME_SPENT_MONTH', fallback=0)
+    month_limit = database.getint(section_name, 'LIMIT_PER_MONTH', fallback=0)
     week_left = week_limit - week_spent
+    month_left = month_limit - month_spent
     
     # Calculate last_seen
     last_seen = ""
@@ -273,8 +278,12 @@ def get_database(user, computer):
         'last_seen': last_seen,
         'time_left': time_left, 
         'time_spent': time_spent,
+        'playtime_left': playtime_left,
+        'playtime_spent': playtime_spent,
         'week_left': week_left,
         'week_spent': week_spent,
+        'month_left': month_left,
+        'month_spent': month_spent,
         'result': 'success'
     }
 

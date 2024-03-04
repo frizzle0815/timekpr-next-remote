@@ -409,6 +409,10 @@
                                     "</h2>" +
                                     "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
                                         "<p class='h6'>[" + user + "@" + computer + "] - [<span class='status'>Unknown</span>]</p>" +
+                                        "Monthly Limit: <span class='time month_total'>...</span><br/>" +
+                                        "<div class='progress'>" +
+                                            "<div class='progress-bar overflow-visible month_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>month_left</div>" +
+                                        "</div>" +
                                         "Weekly Limit: <span class='time week_total'>...</span><br/>" +
                                         "<div class='progress'>" +
                                             "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
@@ -416,6 +420,10 @@
                                         "Daily Limit: <span class='time time_total'>...</span><br/>" +
                                         "<div class='progress'>" +
                                             "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
+                                        "</div>" +
+                                        "Playtime Limit: <span class='time playtime_total'>...</span><br/>" +
+                                        "<div class='progress'>" +
+                                            "<div class='progress-bar bg-warning overflow-visible playtime_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>playtime_left</div>" +
                                         "</div>" +
                                         "Last seen: <span class='time last_seen'>...</span>" +
                                     "</div>" +
@@ -551,29 +559,48 @@
                 });
                 // Calculation for ProgressBar
                 var timeTotal = usage.time_spent + usage.time_left;
+                var playtimeTotal = usage.playtime_spent + usage.playtime_left;
                 var weekTotal = usage.week_spent + usage.week_left;
+                var monthTotal = usage.month_spent + usage.month_left;
+                
                 var timeSpentPercent = (usage.time_left / timeTotal) * 100;
+                var playtimeSpentPercent = (usage.playtime_left / playtimeTotal) * 100;
                 var weekSpentPercent = (usage.week_left / weekTotal) * 100;
+                var monthSpentPercent = (usage.month_left / monthTotal) * 100;
 
                 // Update Progress Bar
                 $('#' + user + rand_dom + " .progress-bar.time_left")
                     .css('width', timeSpentPercent + '%')
                     .attr('aria-valuenow', timeSpentPercent)
                     .html(secondsToHms(usage.time_spent) + ' (' + timeSpentPercent.toFixed(2) + '%)');
+                $('#' + user + rand_dom + " .progress-bar.playtime_left")
+                    .css('width', playtimeSpentPercent + '%')
+                    .attr('aria-valuenow', playtimeSpentPercent)
+                    .html(secondsToHms(usage.playtime_spent) + ' (' + playtimeSpentPercent.toFixed(2) + '%)');
                 $('#' + user + rand_dom + " .progress-bar.week_left")
                     .css('width', weekSpentPercent + '%')
                     .attr('aria-valuenow', weekSpentPercent)
                     .html(secondsToHms(usage.week_spent) + ' (' + weekSpentPercent.toFixed(2) + '%)');
+                $('#' + user + rand_dom + " .progress-bar.month_left")
+                    .css('width', monthSpentPercent + '%')
+                    .attr('aria-valuenow', monthSpentPercent)
+                    .html(secondsToHms(usage.month_spent) + ' (' + monthSpentPercent.toFixed(2) + '%)');
 
                 // Update other values
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .last_seen").html(usage.last_seen);
                 $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
                 $('#' + user + rand_dom + " .time_total").html(secondsToHms(timeTotal));
+                $('#' + user + rand_dom + " .playtime_left").html(secondsToHms(usage.playtime_left));
+                $('#' + user + rand_dom + " .playtime_total").html(secondsToHms(playtimeTotal));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
                 $('#' + user + rand_dom + " .week_total").html(secondsToHms(weekTotal));
+                $('#' + user + rand_dom + " .month_left").html(secondsToHms(usage.month_left));
+                $('#' + user + rand_dom + " .month_total").html(secondsToHms(monthTotal));
                 $('#' + user + rand_dom + " .progress-bar.time_left").html(secondsToHms(usage.time_left));
+                $('#' + user + rand_dom + " .progress-bar.playtime_left").text(secondsToHms(usage.playtime_left));
                 $('#' + user + rand_dom + " .progress-bar.week_left").html(secondsToHms(usage.week_left));
+                $('#' + user + rand_dom + " .progress-bar.month_left").text(secondsToHms(usage.month_left));
                 var statusElement = $('#' + user + rand_dom + " .status");
                 var allProgressBars = $('#' + user + rand_dom + " .progress-bar");
                 if (usage.online_status === 'Online') {
