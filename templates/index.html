@@ -51,6 +51,24 @@
               position: relative;
               top: -2px; /* Move Status Icons 2px upwards */
             }
+            .no-gutters > .col,
+            .no-gutters > [class*="col-"] {
+                padding-right: 0;
+                padding-left: 0;
+            }
+            .no-gutters > .col + .col {
+                margin-left: 2px; /* Oder ein anderer kleiner Wert, der Ihnen gefällt */
+            }
+
+            @keyframes blinker {
+              50% {
+                opacity: 0;
+              }
+            }
+
+            .status-blink {
+              animation: blinker 1.5s linear infinite;
+            }
             /* ==========================================================================
                Fork Me on Github Stuffs
                ========================================================================== */
@@ -114,11 +132,8 @@
                     right: -13px;
                     top: 57px;
                 }
-                .btn-group {
-                    width: 100%;
-                    padding: 5px 0 0 0;
-                }
             }
+
             /* ==========================================================================
                Theme Stuffs
                ========================================================================== */
@@ -380,6 +395,25 @@
     </div>
   </div>
 
+    <!-- Modal Pending Changes -->
+  <div class="modal fade" id="pendingChangeModal" tabindex="-1" aria-labelledby="pendingChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pendingChangeModalLabel">Attention</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          You have a pending time change.</br>
+          Sending a new time change will cancel the current pending time change.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
   <!-- Script  Area -->
@@ -402,78 +436,92 @@
                     // Append user elements to the 'people' container
                     $("#people").append(
                         "<span class='user' id='" + user + rand_dom + "'>" +
-                                "<div class='accordion-item'>" +
-                                    "<h2 class='accordion-header' id='heading" + rand_dom + "'>" +
-                                        "<button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#collapse" + rand_dom + "' aria-expanded='false' aria-controls='collapse" + rand_dom + "'>" +
-                                          "<span class='h3'>" + display_name + "<span class='notify loading'></span></span>" +
-                                        "</button>" +
-                                    "</h2>" +
-                                    "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
-                                        "<p class='h6'>[" + user + "@" + computer + "] - [<span class='status'>Unknown</span>]</p>" +
-                                        "<div class='monthly-wrapper' style='display: none;'>" +
-                                          "Monthly Limit: <span class='time month_total'>...</span><br/>" +
-                                          "<div class='progress'>" +
-                                              "<div class='progress-bar overflow-visible month_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>month_left</div>" +
-                                          "</div>" +
-                                        "</div>" +
-                                        "<div class='weekly-wrapper' style='display: none;'>" +
-                                          "Weekly Limit: <span class='time week_total'>...</span><br/>" +
-                                          "<div class='progress'>" +
-                                              "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
-                                          "</div>" +
-                                        "</div>" +
-                                        "<div class='daily-wrapper' style='display: none;'>" +
-                                          "Daily Limit: <span class='time time_total'>...</span><br/>" +
-                                          "<div class='progress'>" +
-                                              "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
-                                          "</div>" +
-                                        "</div>" +
-                                        "<div class='playtime-wrapper' style='display: none;'>" +
-                                            "Playtime Limit: <span class='time playtime_total'>...</span><br/>" +
-                                            "<div class='progress'>" +
-                                                "<div class='progress-bar bg-warning overflow-visible playtime_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>playtime_left</div>" +
-                                            "</div>" +
-                                        "</div>" +
-                                        "Last seen: <span class='time last_seen'>...</span>" +
-                                    "</div>" +
-                                    "<div id='collapse" + rand_dom + "' class='accordion-collapse collapse' aria-labelledby='heading" + rand_dom + "' data-bs-parent='#accordion'>" +
-                                      "<div class='accordion-body'>" +
-                                            "<div class='btn-group' role='group' aria-label='Action'>" +
-                                                "<input type='radio' class='btn-check disabled' id='add" + rand_dom + "' value='add' name='action' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='add" + rand_dom + "'>Add</label>" +
-                                                "<input type='radio' class='btn-check disabled' id='remove" + rand_dom + "' value='remove' name='action' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='remove" + rand_dom + "'>Remove</label> " +
-                                            "</div> " +
-                                            "<div class='btn-group' role='group' aria-label='Timeframe'>" +
-                                                "<input type='radio' class='btn-check disabled' id='daily" + rand_dom + "' value='daily' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='daily" + rand_dom + "'>Daily</label>" +
-                                                "<input type='radio' class='btn-check disabled' id='weekly" + rand_dom + "' value='weekly' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='weekly" + rand_dom + "'>Weekly</label>" +
-                                                "<input type='radio' class='btn-check disabled' id='monthly" + rand_dom + "' value='monthly' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='monthly" + rand_dom + "'>Monthly</label>" +
-                                                "<input type='radio' class='btn-check disabled' id='playtime" + rand_dom + "' value='playtime' name='timeframe' />" +
-                                                "<label class='btn btn-outline-primary disabled' for='playtime" + rand_dom + "'>Playtime</label>" +
-                                            "</div>" +
-                                            "<div class='btn-group' role='group' aria-label='Time Slider'>" +
-                                                "<div class='btn btn-outline-primary disabled'>" +
-                                                    "<span id='slider-time-value" + rand_dom + "'>15 min</span>" + 
-                                                    "<input type='range' class='form-range disabled' id='seconds" +  rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' />" +
-                                                "</div>" +
-                                            "</div>" +
-                                            "<div class='btn-group' role='group' aria-label='save'>" +
-                                                "<button class='btn btn-outline-primary save_me disabled' value='save' user='" + user + "' computer='" + computer + "'>Save</button>" +
-                                            "</div> " +
-                                            "<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
-                                              "<div class='card-header'>" +
-                                                  "Time Change History [last 10]" +
-                                              "</div>" +
-                                              "<ul class='list-group list-group-flush p-1' id='time-change-list-" + user + rand_dom + "'>" +
-                                                  // Populated by script
-                                              "</ul>" +
-                                          "</div>" +
-                                        "</div>" +
+                          "<div class='accordion-item'>" +
+                              "<h2 class='accordion-header' id='heading" + rand_dom + "'>" +
+                                  "<button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#collapse" + rand_dom + "' aria-expanded='false' aria-controls='collapse" + rand_dom + "'>" +
+                                    "<span class='h3'>" + display_name + "<span class='notify loading'></span></span>" +
+                                  "</button>" +
+                              "</h2>" +
+                              "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
+                                "<p class='h6'>[" + user + "@" + computer + "] - [<span class='status'>Unknown</span>]<span class='lastRelevantChange'></span></p>" +
+                                "<div class='monthly-wrapper' style='display: none;'>" +
+                                  "Monthly Limit: <span class='time month_total'>...</span><br/>" +
+                                  "<div class='progress'>" +
+                                      "<div class='progress-bar overflow-visible month_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>month_left</div>" +
+                                  "</div>" +
+                                "</div>" +
+                                "<div class='weekly-wrapper' style='display: none;'>" +
+                                  "Weekly Limit: <span class='time week_total'>...</span><br/>" +
+                                  "<div class='progress'>" +
+                                      "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
+                                  "</div>" +
+                                "</div>" +
+                                "<div class='daily-wrapper' style='display: none;'>" +
+                                  "Daily Limit: <span class='time time_total'>...</span><br/>" +
+                                  "<div class='progress'>" +
+                                      "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
+                                  "</div>" +
+                                "</div>" +
+                                "<div class='playtime-wrapper' style='display: none;'>" +
+                                    "Playtime Limit: <span class='time playtime_total'>...</span><br/>" +
+                                    "<div class='progress'>" +
+                                        "<div class='progress-bar bg-warning overflow-visible playtime_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>playtime_left</div>" +
                                     "</div>" +
                                 "</div>" +
+                                "Last seen: <span class='time last_seen'>...</span>" +
+                            "</div>" +
+                            "<div id='collapse" + rand_dom + "' class='accordion-collapse collapse' aria-labelledby='heading" + rand_dom + "' data-bs-parent='#accordion'>" +
+                              "<div class='accordion-body'>" +
+                                "<div class='row no-gutters mb-2' role='group' aria-label='Action'>" +
+                                    "<div class='col-6'>" +
+                                        "<input type='radio' class='btn-check' id='add" + rand_dom + "' value='add' name='action' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='add" + rand_dom + "'>Add</label>" +
+                                    "</div>" +
+                                    "<div class='col-6'>" +
+                                        "<input type='radio' class='btn-check' id='remove" + rand_dom + "' value='remove' name='action' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='remove" + rand_dom + "'>Remove</label>" +
+                                    "</div>" +
+                                "</div>" +
+                                "<div class='row no-gutters mb-2' role='group' aria-label='Timeframe'>" +
+                                    "<div class='col daily-wrapper px-0'>" +
+                                        "<input type='radio' class='btn-check' id='daily" + rand_dom + "' value='daily' name='timeframe' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='daily" + rand_dom + "'>Daily</label>" +
+                                    "</div>" +
+                                    "<div class='col weekly-wrapper px-0'>" +
+                                        "<input type='radio' class='btn-check' id='weekly" + rand_dom + "' value='weekly' name='timeframe' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='weekly" + rand_dom + "'>Weekly</label>" +
+                                    "</div>" +
+                                    "<div class='col monthly-wrapper px-0'>" +
+                                        "<input type='radio' class='btn-check' id='monthly" + rand_dom + "' value='monthly' name='timeframe' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='monthly" + rand_dom + "'>Monthly</label>" +
+                                    "</div>" +
+                                    "<div class='col playtime-wrapper px-0'>" +
+                                        "<input type='radio' class='btn-check' id='playtime" + rand_dom + "' value='playtime' name='timeframe' disabled />" +
+                                        "<label class='btn btn-outline-primary w-100 disabled' for='playtime" + rand_dom + "'>Playtime</label>" +
+                                    "</div>" +
+                                "</div>" +
+                                "<div class='row no-gutters mb-2' role='group' aria-label='Time Slider'>" +
+                                    "<div class='col-12 btn btn-outline-primary disabled'>" +
+                                        "<span id='slider-time-value" + rand_dom + "' class='w-100'>15 min</span>" +
+                                        "<input type='range' class='form-range w-100 disabled' id='seconds" + rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' disabled />" +
+                                    "</div>" +
+                                "</div>" +
+                                "<div class='row no-gutters mb-2' role='group' aria-label='save'>" +
+                                    "<div class='col-12'>" +
+                                        "<button class='btn btn-outline-primary w-100 save_me disabled' value='save' user='" + user + "' computer='" + computer + "' disabled >Save</button>" +
+                                    "</div>" +
+                                "</div>" +
+                                "<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
+                                  "<div class='card-header'>" +
+                                      "Time Change History [last 10]" +
+                                  "</div>" +
+                                    "<ul class='list-group list-group-flush p-1' id='time-change-list-" + user + rand_dom + "'>" +
+                                        // Populated by script
+                                    "</ul>" +
+                                "</div>" +
+                              "</div>" +
+                            "</div>" +
+                          "</div>" +
                         "</span>"
                     );
                     $("#people").append("<hr />"); // add horizontal line between users
@@ -495,9 +543,9 @@
 
                         // Disallow time changes until first valid connection
                         if (usage.last_seen !== "Never") {
-                            $('#' + user + rand_dom + ' .btn').removeClass("disabled");
-                            $('#' + user + rand_dom + ' .btn-check').removeClass("disabled");
-                            $('#' + user + rand_dom + ' .form-range').removeClass("disabled");
+                            $('#' + user + rand_dom + ' .btn').removeClass("disabled").prop('disabled', false);
+                            $('#' + user + rand_dom + ' .btn-check').removeClass("disabled").prop('disabled', false);
+                            $('#' + user + rand_dom + ' .form-range').removeClass("disabled").prop('disabled', false);
                         }
                         render_user_to_dom(user, computer, usage, rand_dom);
                         add_click_handler(user, rand_dom);
@@ -617,31 +665,29 @@
                 // Calculation for ProgressBar
                 var timeTotal = usage.time_spent + usage.time_left;
                 var playtimeTotal = usage.playtime_spent + usage.playtime_left;
-                var weekTotal = usage.week_spent + usage.week_left;
-                var monthTotal = usage.month_spent + usage.month_left;
                 
                 var timeSpentPercent = (usage.time_left / timeTotal) * 100;
                 var playtimeSpentPercent = (usage.playtime_left / playtimeTotal) * 100;
-                var weekSpentPercent = (usage.week_left / weekTotal) * 100;
-                var monthSpentPercent = (usage.month_left / monthTotal) * 100;
+                var weekSpentPercent = (usage.week_left / usage.week_limit) * 100;
+                var monthSpentPercent = (usage.month_left / usage.month_limit) * 100;
 
                 // Update Progress Bar
                 $('#' + user + rand_dom + " .progress-bar.time_left")
                     .css('width', timeSpentPercent + '%')
                     .attr('aria-valuenow', timeSpentPercent)
-                    .html(secondsToHms(usage.time_spent) + ' (' + timeSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(usage.time_left) + ' (' + timeSpentPercent.toFixed(2) + '%)');
                 $('#' + user + rand_dom + " .progress-bar.playtime_left")
                     .css('width', playtimeSpentPercent + '%')
                     .attr('aria-valuenow', playtimeSpentPercent)
-                    .html(secondsToHms(usage.playtime_spent) + ' (' + playtimeSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(usage.playtime_left) + ' (' + playtimeSpentPercent.toFixed(2) + '%)');
                 $('#' + user + rand_dom + " .progress-bar.week_left")
                     .css('width', weekSpentPercent + '%')
                     .attr('aria-valuenow', weekSpentPercent)
-                    .html(secondsToHms(usage.week_spent) + ' (' + weekSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(usage.week_left) + ' (' + weekSpentPercent.toFixed(2) + '%)');
                 $('#' + user + rand_dom + " .progress-bar.month_left")
                     .css('width', monthSpentPercent + '%')
                     .attr('aria-valuenow', monthSpentPercent)
-                    .html(secondsToHms(usage.month_spent) + ' (' + monthSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(usage.month_left) + ' (' + monthSpentPercent.toFixed(2) + '%)');
 
                 // Update other values
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
@@ -651,13 +697,9 @@
                 $('#' + user + rand_dom + " .playtime_left").html(secondsToHms(usage.playtime_left));
                 $('#' + user + rand_dom + " .playtime_total").html(secondsToHms(playtimeTotal));
                 $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
-                $('#' + user + rand_dom + " .week_total").html(secondsToHms(weekTotal));
+                $('#' + user + rand_dom + " .week_total").html(secondsToHms(usage.week_limit));
                 $('#' + user + rand_dom + " .month_left").html(secondsToHms(usage.month_left));
-                $('#' + user + rand_dom + " .month_total").html(secondsToHms(monthTotal));
-                $('#' + user + rand_dom + " .progress-bar.time_left").html(secondsToHms(usage.time_left));
-                $('#' + user + rand_dom + " .progress-bar.playtime_left").text(secondsToHms(usage.playtime_left));
-                $('#' + user + rand_dom + " .progress-bar.week_left").html(secondsToHms(usage.week_left));
-                $('#' + user + rand_dom + " .progress-bar.month_left").text(secondsToHms(usage.month_left));
+                $('#' + user + rand_dom + " .month_total").html(secondsToHms(usage.month_limit));
                 var statusElement = $('#' + user + rand_dom + " .status");
                 var allProgressBars = $('#' + user + rand_dom + " .progress-bar");
                 if (usage.online_status === 'Online') {
@@ -673,9 +715,10 @@
                 
                 // Check if time_changes data is available and render it
                 var timeChangeListHtml = '';
+                var lastRelevantChangeHtml = '';
 
                 if(usage.time_changes && Object.keys(usage.time_changes).length > 0) {
-                    // Erstellen Sie ein Array aus den Schlüsseln von time_changes
+                    // Create an array from the keys of time_changes
                     var changesArray = Object.keys(usage.time_changes).map(function(key) {
                         var timestamp = key.split('_').pop();
                         var details = parseChangeDetails(usage.time_changes[key]);
@@ -688,12 +731,25 @@
                         };
                     });
 
-                    // Sortieren Sie das Array basierend auf dem Zeitstempel in absteigender Reihenfolge
+                    // Sort the array based on the timestamp in descending order
                     changesArray.sort(function(a, b) {
                         return b.timestamp.localeCompare(a.timestamp);
                     });
 
-                    // Bauen Sie die HTML-Liste mit den sortierten Einträgen
+                    // Find the last relevant change with a status other than 'success'
+                    var lastRelevantChange = usage.time_changes && Object.values(usage.time_changes).find(function(change) {
+                        var details = parseChangeDetails(change);
+                        return details.status.toLowerCase() === 'pending';
+                    });
+
+                    // If a relevant change is found, create the HTML for it
+                    if (lastRelevantChange) {
+                        var details = parseChangeDetails(lastRelevantChange);
+                        var lastRelevantChangeHtml = ` ${details.action} ${details.minutes} mins (${details.timeframe}) - <span class='status-blink'>${details.status}</span>`;
+                        $('#' + user + rand_dom + ' .lastRelevantChange').html(lastRelevantChangeHtml);
+                    }
+
+                    // Build the HTML list with the sorted entries
                     changesArray.forEach(function(change) {
                         var listItem = `<li class='list-group-item'>${change.action} ${change.minutes} mins (${change.timeframe}) - ${change.status}</li>`;
                         timeChangeListHtml += listItem;
@@ -716,11 +772,22 @@
 
         $(document).ready(function() {
             // Event-Handler for Opening Accordion
-            $("#people").on("click", ".accordion-button", function() {
-              if (isPinRequired && !isPinVerified) {
+            $("#people").on("show.bs.collapse", ".accordion-collapse", function() {
+                // Das Element, das geöffnet wird
+                var accordionItem = $(this).closest('.accordion-item');
+                // Check if the accordion item has a last relevant change
+                var lastRelevantChange = accordionItem.find('.lastRelevantChange').text().trim();
+                
+                if (lastRelevantChange !== '') {
+                    // If there is a last relevant change, show the warning modal
+                    $('#pendingChangeModal').modal('show');
+                } else if (isPinRequired && !isPinVerified) {
+                    // If a PIN is required and not verified, show the PIN modal
                     $('#pinModal').modal('show');
-                    return false; // Prevent the accordion from opening
+                    // Prevent the accordion from opening
+                    return false;
                 }
+                // If there is no last relevant change and no PIN required, the accordion will open normally
             });
 
             // Event-Handler for Modal
