@@ -178,6 +178,28 @@
               color: #fdf5f6 !important;
               background-color: darkgray;
             }
+            .dark-mode .accordion {
+              background-color: transparent;
+              color: #7385cc;
+            }
+            .dark-mode .accordion-item {
+              background-color: transparent; /* Dunklerer Hintergrund für jedes Accordion-Item */
+              border-color: transparent; /* Dunklere Grenzen für ein besseres Kontrastverhältnis */
+            }
+
+            .dark-mode .accordion-button {
+              background-color: transparent;
+              color: #fdf5f6; /* Helle Schriftfarbe für den Accordion-Button im Dark Mode */
+            }
+            .dark-mode .accordion-button:not(.collapsed)::after {
+              background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            }
+            .dark-mode .accordion-button::after {
+              background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            }
+            .dark-mode .progress {
+              background-color: darkgrey;
+            }
 
             /* ==========================================================================
             Accordions
@@ -190,6 +212,7 @@
               border: none;
               box-shadow: none;
               text-align: left;
+              background-color: transparent;
               padding-top: 0;
               padding-left: 0;
               padding-bottom: 0;
@@ -236,7 +259,7 @@
 
   <!-- Menu Area -->
 
-  <ul class="nav nav-tabs" id="myTab" role="tablist">
+  <!--<ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item">
       <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Home</a>
     </li>
@@ -249,7 +272,8 @@
     <li class="nav-item">
       <a class="nav-link" id="config-tab" data-toggle="tab" href="#config" role="tab" aria-controls="config" aria-selected="false">Config</a>
     </li>
-  </ul>
+  </ul>-->
+
 
   <div class="tab-content" id="myTabContent">
     <!-- Main Area -->
@@ -511,14 +535,14 @@
                                         "<button class='btn btn-outline-primary w-100 save_me disabled' value='save' user='" + user + "' computer='" + computer + "' disabled >Save</button>" +
                                     "</div>" +
                                 "</div>" +
-                                "<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
+                                /*"<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
                                   "<div class='card-header'>" +
                                       "Time Change History [last 10]" +
                                   "</div>" +
                                     "<ul class='list-group list-group-flush p-1' id='time-change-list-" + user + rand_dom + "'>" +
                                         // Populated by script
                                     "</ul>" +
-                                "</div>" +
+                                "</div>" +*/
                               "</div>" +
                             "</div>" +
                           "</div>" +
