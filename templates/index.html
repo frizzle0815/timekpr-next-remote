@@ -69,6 +69,26 @@
             .status-blink {
               animation: blinker 1.5s linear infinite;
             }
+
+            /* ==========================================================================
+               PIN Stuff
+               ========================================================================== */
+
+            .accordion-body {
+              /* Stellen Sie sicher, dass das accordion-body-Element eine definierte Position hat */
+              position: relative;
+            }
+            .pin-overlay {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%; /* Füllt die Breite des Elternelements aus */
+              height: 100%; /* Füllt die Höhe des Elternelements aus */
+              background: rgba(235, 235, 235, 0.5); /* Semi-transparentes Overlay */
+              z-index: 10; /* Stellen Sie sicher, dass das Overlay über anderen Inhalten liegt */
+            }
+
+
             /* ==========================================================================
                Fork Me on Github Stuffs
                ========================================================================== */
@@ -199,6 +219,22 @@
             }
             .dark-mode .progress {
               background-color: darkgrey;
+            }
+            .dark-mode .form-control {
+              background-color: #555;
+              color: #eee;
+              border: 1px solid #666;
+            }
+            .dark-mode .btn-primary {
+              background-color: #0d6efd;
+              border-color: #0a58ca;
+              color: #fff;
+            }
+            .dark-mode .btn-close {
+              filter: invert(1);
+            }
+            .dark-mode #pinError {
+              color: #ff6b6b;
             }
 
             /* ==========================================================================
@@ -401,43 +437,6 @@
     <label class="btn btn-outline-primary no-focus" id="pin_status">PIN: <span id="pin_status_icon" class="svg-icon-adjust"><!-- Updated by script --></span></label>
   </div>
 
-  <!-- Modal for PIN input -->
-  <div class="modal" id="pinModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Enter PIN</h5>
-        </div>
-        <div class="modal-body">
-          <input type="password" id="pinInput" class="form-control" placeholder="Enter PIN">
-          <div id="pinError" style="display: none; color: red;"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="submitPin">Submit</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-    <!-- Modal Pending Changes -->
-  <div class="modal fade" id="pendingChangeModal" tabindex="-1" aria-labelledby="pendingChangeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="pendingChangeModalLabel">Attention</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          You have a pending time change.</br>
-          Sending a new time change will cancel the current pending time change.
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Confirm</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
   <!-- Script  Area -->
@@ -449,7 +448,10 @@
         var verifiedPin = null;
         $.getJSON( "/config", function( data ) {
             isPinRequired = data.pin_required;
+            updatePinStatusIcon();
             updatePinStatusLabelClickable();
+            updateBackgroundStatusIcon();
+            updateAutoUpdateButtonClickable();
             $.each( data.trackme, function( computer, userArrays ) {
                 $.each(userArrays, function(index, userArray) {
                     let rand_dom = '_' + uuidv4();
@@ -468,11 +470,13 @@
                               "</h2>" +
                               "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
                                 "<p class='h6'>[" + user + "@" + computer + "] - [<span class='status'>Unknown</span>]<span class='lastRelevantChange'></span></p>" +
+
                                 "<div class='monthly-wrapper' style='display: none;'>" +
                                   "Monthly Limit: <span class='time month_total'>...</span><br/>" +
                                   "<div class='progress'>" +
                                       "<div class='progress-bar overflow-visible month_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>month_left</div>" +
                                   "</div>" +
+
                                 "</div>" +
                                 "<div class='weekly-wrapper' style='display: none;'>" +
                                   "Weekly Limit: <span class='time week_total'>...</span><br/>" +
@@ -480,12 +484,14 @@
                                       "<div class='progress-bar overflow-visible week_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>week_left</div>" +
                                   "</div>" +
                                 "</div>" +
+
                                 "<div class='daily-wrapper' style='display: none;'>" +
                                   "Daily Limit: <span class='time time_total'>...</span><br/>" +
                                   "<div class='progress'>" +
                                       "<div class='progress-bar overflow-visible time_left' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>time_left</div>" +
                                   "</div>" +
                                 "</div>" +
+
                                 "<div class='playtime-wrapper' style='display: none;'>" +
                                     "Playtime Limit: <span class='time playtime_total'>...</span><br/>" +
                                     "<div class='progress'>" +
@@ -494,8 +500,10 @@
                                 "</div>" +
                                 "Last seen: <span class='time last_seen'>...</span>" +
                             "</div>" +
+
                             "<div id='collapse" + rand_dom + "' class='accordion-collapse collapse' aria-labelledby='heading" + rand_dom + "' data-bs-parent='#accordion'>" +
-                              "<div class='accordion-body'>" +
+                              "<div class='accordion-body  position-relative'>" +
+
                                 "<div class='row no-gutters mb-2' role='group' aria-label='Action'>" +
                                     "<div class='col-6'>" +
                                         "<input type='radio' class='btn-check' id='add" + rand_dom + "' value='add' name='action' disabled />" +
@@ -506,6 +514,7 @@
                                         "<label class='btn btn-outline-primary w-100 disabled' for='remove" + rand_dom + "'>Remove</label>" +
                                     "</div>" +
                                 "</div>" +
+
                                 "<div class='row no-gutters mb-2' role='group' aria-label='Timeframe'>" +
                                     "<div class='col daily-wrapper px-0'>" +
                                         "<input type='radio' class='btn-check' id='daily" + rand_dom + "' value='daily' name='timeframe' disabled />" +
@@ -524,17 +533,35 @@
                                         "<label class='btn btn-outline-primary w-100 disabled' for='playtime" + rand_dom + "'>Playtime</label>" +
                                     "</div>" +
                                 "</div>" +
+
                                 "<div class='row no-gutters mb-2' role='group' aria-label='Time Slider'>" +
                                     "<div class='col-12 btn btn-outline-primary disabled'>" +
                                         "<span id='slider-time-value" + rand_dom + "' class='w-100'>15 min</span>" +
                                         "<input type='range' class='form-range w-100 disabled' id='seconds" + rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' disabled />" +
                                     "</div>" +
                                 "</div>" +
+
                                 "<div class='row no-gutters mb-2' role='group' aria-label='save'>" +
                                     "<div class='col-12'>" +
                                         "<button class='btn btn-outline-primary w-100 save_me disabled' value='save' user='" + user + "' computer='" + computer + "' disabled >Save</button>" +
                                     "</div>" +
                                 "</div>" +
+
+                                "<div class='pin-overlay position-absolute w-100 h-100' id='pinOverlay" + rand_dom + "' style='top: 0; left: 0; display: none;'>" +
+                                  "<div class='pin-container d-flex justify-content-center align-items-center h-100'>" +  
+                                    "<div class='text-center'>" +
+                                      "<form class='form-inline' id='pinForm" + rand_dom + "'>" +
+                                        "<div class='form-group mb-2'>" +
+                                          "<label for='pinInput" + rand_dom + "' class='sr-only'>Enter PIN:</label>" +
+                                          "<input type='password' class='form-control' id='pinInput" + rand_dom + "' placeholder='Enter PIN'>" +  
+                                        "</div>" +
+                                        "<button type='submit' class='btn btn-primary mb-2 submit-button'>Submit</button>" +
+                                      "</form>" +
+                                      "<div class='alert alert-danger mt-2 d-none' role='alert'></div>" +
+                                    "</div>" +
+                                  "</div>" +
+                                "</div>" +
+
                                 /*"<div class='card btn-group' id='time-change-card-" + user + rand_dom + "'>" +
                                   "<div class='card-header'>" +
                                       "Time Change History [last 10]" +
@@ -565,14 +592,26 @@
                         // Hide the loading element
                         $('#' + user + rand_dom + " .loading").stop(true, true).hide();
 
-                        // Disallow time changes until first valid connection
-                        if (usage.last_seen !== "Never") {
+                        if (usage.last_seen !== "Never" && isBackgroundServiceEnabled) {
+                            // Enable if backgroundservice is true
+                            $('#' + user + rand_dom + ' .btn').removeClass("disabled").prop('disabled', false);
+                            $('#' + user + rand_dom + ' .btn-check').removeClass("disabled").prop('disabled', false);
+                            $('#' + user + rand_dom + ' .form-range').removeClass("disabled").prop('disabled', false);
+                        }
+
+                        if (usage.last_seen !== "Never" && usage.online_status === 'Online') {
+                            // If backgroundservice is false one enable when user is
                             $('#' + user + rand_dom + ' .btn').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .btn-check').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .form-range').removeClass("disabled").prop('disabled', false);
                         }
                         render_user_to_dom(user, computer, usage, rand_dom);
                         add_click_handler(user, rand_dom);
+
+                        if (isPinRequired && !isPinVerified) {
+                            // Show the PIN overlay for this specific user
+                            $('#pinOverlay' + rand_dom).show();
+                        }
                     }).fail(function() {
                         // If there's an error loading the data, stop the loading animation
                         clearInterval(loadingInterval);
@@ -600,34 +639,27 @@
 
         function add_click_handler(user, rand_dom) {
             $("#" + user + rand_dom + " .save_me").off('click').click(function() {
-                // Check if PIN is necessary and already verified
-                if (isPinRequired && !isPinVerified) {
-                    // Show pinModal if PIN is not verified
-                    $('#pinModal').modal('show');
-                } else {
-                    // Proceed with the action as the PIN is not required or already verified
-                    const computer = $(this).attr('computer');
-                    const action = $('#' + user + rand_dom + ' input[name="action"]:checked').val();
-                    const timeframe = $('#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
-                    const seconds = $('#' + user + rand_dom + ' input[name="seconds"]').val();
-                    
-                    console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
-                    if (action !== undefined && seconds !== undefined && timeframe !== undefined) {
-                        $('input').prop('checked', false);
-                        // Include the PIN in the function call if it's required
-                        add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom, function(message) {
-                            // Update the .notify element with the message from the callback
-                            $('#' + user + rand_dom + ' .notify').html(message).fadeIn(function() {
-                                setTimeout(function() {
-                                    $('#' + user + rand_dom + ' .notify').fadeOut("slow");
-                                }, 1000);
-                            });
+                const computer = $(this).attr('computer');
+                const action = $('#' + user + rand_dom + ' input[name="action"]:checked').val();
+                const timeframe = $('#' + user + rand_dom + ' input[name="timeframe"]:checked').val();
+                const seconds = $('#' + user + rand_dom + ' input[name="seconds"]').val();
+                
+                console.log("Attempting to save: ", {user, computer, action, seconds, timeframe}); // Debug
+                if (action !== undefined && seconds !== undefined && timeframe !== undefined) {
+                    $('input').prop('checked', false);
+                    $('#' + user  + rand_dom + " .notify").show().html("Transmitting...");
+                    add_or_remove_time(user, computer, action, seconds, timeframe, rand_dom, function(message) {
+                        // Update the .notify element with the message from the callback
+                        $('#' + user + rand_dom + ' .notify').html(message).fadeIn(function() {
+                            setTimeout(function() {
+                                $('#' + user + rand_dom + ' .notify').fadeOut("slow");
+                            }, 1000);
                         });
-                        // Collapse accordion
-                        $('#collapse' + rand_dom).collapse('hide');
-                    } else {
-                        alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
-                    }
+                    });
+                    // Collapse accordion
+                    $('#collapse' + rand_dom).collapse('hide');
+                } else {
+                    alert("Choose 'Add' or 'Remove', a timeframe, and an amount of time to add.");
                 }
             });
         }
@@ -785,6 +817,17 @@
                   // Append the time change history to the corresponding list in the HTML
                 $('#time-change-list-' + user + rand_dom).html(timeChangeListHtml);
 
+                // Warnin message in case there are pending time changes
+                var warningMessageContainer = $('#' + user + rand_dom + " .warning-message");
+                if(lastRelevantChange) {
+                    var warningMessage = "<div class='warning-message' style='color: red; text-align: center;'>! Current pending time change will be cancelled !</div>";
+                    if(warningMessageContainer.length === 0) {
+                        $('#' + user + rand_dom + " .save_me").after(warningMessage);
+                    }
+                } else {
+                    warningMessageContainer.remove();
+                }
+
             } else {
                 // Error Notification
                 $('#' + user + rand_dom + " .time_wrapper").html(computer + " failed. Off? Bad Auth?");
@@ -794,70 +837,72 @@
 
         // #### PIN Section START ####
 
-        $(document).ready(function() {
-            // Event-Handler for Opening Accordion
-            $("#people").on("show.bs.collapse", ".accordion-collapse", function() {
-                // Das Element, das geöffnet wird
-                var accordionItem = $(this).closest('.accordion-item');
-                // Check if the accordion item has a last relevant change
-                var lastRelevantChange = accordionItem.find('.lastRelevantChange').text().trim();
-                
-                if (lastRelevantChange !== '') {
-                    // If there is a last relevant change, show the warning modal
-                    $('#pendingChangeModal').modal('show');
-                } else if (isPinRequired && !isPinVerified) {
-                    // If a PIN is required and not verified, show the PIN modal
-                    $('#pinModal').modal('show');
-                    // Prevent the accordion from opening
-                    return false;
-                }
-                // If there is no last relevant change and no PIN required, the accordion will open normally
-            });
+        // Function to verify the PIN on the server
+        function verifyPin(pinInputId, pinOverlayId) {
+            const enteredPin = $('#' + pinInputId).val();
+            $.ajax({
+                type: 'POST',
+                url: '/verify_pin',
+                data: { pin: enteredPin },
+                success: function(data) {
+                    if (data.result === "success") {
+                        isPinVerified = true;
+                        verifiedPin = enteredPin;
+                        updatePinStatusIcon();
+                        updateBackgroundStatusIcon();
+                        updateAutoUpdateButtonClickable();
 
-            // Event-Handler for Modal
-            $('#pinModal').on('shown.bs.modal', function() {
-                $('#pinInput').focus();
-            });
+                        // Remove all Overlays when successfull
+                        $('.pin-overlay').hide();
 
-            // Function to verify the PIN on the server
-            function verifyPin() {
-                const enteredPin = $('#pinInput').val();
-                $.ajax({
-                    type: 'POST',
-                    url: '/verify_pin',
-                    data: { pin: enteredPin },
-                    success: function(data) {
-                        if (data.result === "success") {
-                            isPinVerified = true;
-                            verifiedPin = enteredPin;
-                            updatePinStatusIcon();
-                            $('#pinModal').modal('hide');
-                        } else {
-                            $('#pinError').text('Incorrect PIN').show();
-                        }
-                    },
-                    error: function() {
-                        $('#pinError').text('An error occurred while verifying the PIN.').show();
+                        // Activate buttons
+                        $('.btn').removeClass("disabled").prop('disabled', false);
+                        $('.btn-check').removeClass("disabled").prop('disabled', false);
+                        $('.form-range').removeClass("disabled").prop('disabled', false);
+                    } else {
+                        $('#' + pinInputId).siblings('.alert-danger').text('Incorrect PIN').removeClass('d-none').show();
                     }
-                });
-                $('#pinInput').val(''); // Clear the input
-            }
+                },
+                error: function(xhr) {
+                    $('#' + pinInputId).siblings('.alert-danger').text('An error occurred while verifying the PIN.').removeClass('d-none').show();
+                }
+            });
+            $('#' + pinInputId).val('');
+        }
 
-            // Event-Handler for Submitting PIN
-            $('#submitPin').click(verifyPin);
-            $('#pinInput').on('keypress', function(e) {
-                if (e.which === 13) { // Enter-key pressed
-                    verifyPin();
+        $(document).ready(function() {
+            // Event listener for all submit buttons of the PIN forms
+            $(document).on('submit', 'form[id^="pinForm"]', function(event) {
+                event.preventDefault(); // Prevent the default form submit behavior
+                var formId = $(this).attr('id');
+                var pinInputId = 'pinInput' + formId.replace('pinForm', '');
+                var pinOverlayId = 'pinOverlay' + formId.replace('pinForm', '');
+                verifyPin(pinInputId, pinOverlayId);
+            });
+
+            // Event listener for pressing the Enter key in all PIN input fields
+            $(document).on('keypress', 'input[id^="pinInput"]', function(event) {
+                if (event.which === 13) { // 13 is the keycode for the Enter key
+                    event.preventDefault(); // Prevent the default form submit behavior
+                    var pinInputId = $(this).attr('id');
+                    var pinOverlayId = 'pinOverlay' + pinInputId.replace('pinInput', '');
+                    verifyPin(pinInputId, pinOverlayId);
                 }
             });
 
-            // Event-Handler for Closing Modal
-            $('#pinModal').on('hidden.bs.modal', function() {
-                $('#pinError').hide(); // Hide any error messages
-                if (!isPinVerified) {
-                    // Close accordion if PIN is not verified
-                    $('.accordion-collapse').collapse('hide');
-                }
+            // Event listener for accordion open (shown.bs.collapse)
+            // This will apply to all accordion items because they share the same class 'accordion-collapse'
+            $(document).on('shown.bs.collapse', '.accordion-collapse', function () {
+                // Extract the random part of the ID from the event target
+                var rand_dom = this.id.replace('collapse', '');
+              
+                // Focus on the corresponding PIN input
+                $('#pinInput' + rand_dom).focus();
+
+                // Scroll to the accordion header associated with the opened accordion
+                $('html, body').animate({
+                    scrollTop: $('#heading' + rand_dom).offset().top
+                }, 500); // duration 500ms
             });
         });
 
@@ -993,7 +1038,7 @@
         var isBackgroundServiceEnabled = "{{ database['settings']['background_service'] }}" === 'true';
 
         // Change icons of background service
-        function updateStatusIcon() {
+        function updateBackgroundStatusIcon() {
           var statusSpan = document.getElementById('status-background_service');
           statusSpan.innerHTML = isBackgroundServiceEnabled ? 
           '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="green" class="bi bi-check-circle" viewBox="0 0 16 16">' +
@@ -1006,17 +1051,28 @@
           '</svg>';
         }
 
-        // Update icon on page load
-        updateStatusIcon();
-
         // Event-Handler for Background Service
-        document.getElementById('auto_update').addEventListener('click', function() {
+        function handleAutoUpdateClick() {
           isBackgroundServiceEnabled = !isBackgroundServiceEnabled;
-          
-          // Call Funktin updateSettings to update database.ini
+          // Call function updateSettings to update database.ini
           updateSetting('background_service', isBackgroundServiceEnabled ? 'true' : 'false');
-          updateStatusIcon();
-        });
+          updateBackgroundStatusIcon();
+        }
+
+        function updateAutoUpdateButtonClickable() {
+          var autoUpdateButton = document.getElementById('auto_update');
+          if (!isPinRequired || (isPinRequired && isPinVerified)) {
+            // Make the button clickable
+            autoUpdateButton.style.pointerEvents = 'auto';
+            autoUpdateButton.classList.remove('disabled');
+            autoUpdateButton.addEventListener('click', handleAutoUpdateClick);
+          } else {
+            // Make the button not clickable
+            autoUpdateButton.style.pointerEvents = 'none';
+            autoUpdateButton.classList.add('disabled');
+            autoUpdateButton.removeEventListener('click', handleAutoUpdateClick);
+          }
+        }
 
         // #### Background Service Button END ####
 
@@ -1043,35 +1099,41 @@
           }
         }
 
-        // Update icon on page load
-        updatePinStatusIcon();
-
         // Function to handle the pin status when the label is clicked
         function handlePinStatus() {
-          if (isPinRequired && !isPinVerified) {
-            // Open modal to enter pin
-            $('#pinModal').modal('show'); // Open the modal for PIN entry
-          } else if (isPinRequired && isPinVerified) {
+          if (isPinRequired && isPinVerified) {
+            // Reset the PIN verification status
             verifiedPin = null;
             isPinVerified = false;
             updatePinStatusIcon(); // Update the icon to reflect the new status
+            updateBackgroundStatusIcon();
+            updateAutoUpdateButtonClickable();
+
+            // Show the PIN overlay and disable all buttons
+            $('.pin-overlay').show();
+
+            // Deactivate buttons
+            $('.btn').not('#toggle_theme, #auto_update, #pin_status, .submit-button').addClass("disabled").prop('disabled', true);
+            $('.btn-check').addClass("disabled").prop('disabled', true);
+            $('.form-range').addClass("disabled").prop('disabled', true);
+
+            $('.accordion-collapse').collapse('hide');
+          } else if (isPinRequired && !isPinVerified) {
+            // Open the topmost accordion item when PIN is required but not verified
+            $('.accordion-collapse').first().collapse('show');
           }
+          // Do nothing when PIN is not required
         }
 
         function updatePinStatusLabelClickable() {
           var pinStatusLabel = document.getElementById('pin_status');
-          if (isPinRequired) {
-            pinStatusLabel.style.pointerEvents = 'auto'; // Label is clickable
-            pinStatusLabel.classList.remove('disabled'); // Remove Bootstrap 'disabled' class if present
-            pinStatusLabel.addEventListener('click', handlePinStatus);
-          } else {
-            pinStatusLabel.style.pointerEvents = 'none'; // Label is not clickable
-            pinStatusLabel.classList.add('disabled'); // Add Bootstrap 'disabled' class for visual feedback
-            pinStatusLabel.removeEventListener('click', handlePinStatus);
-          }
-          updatePinStatusIcon(); // Update the icon as well
+
+          pinStatusLabel.style.pointerEvents = 'auto';
+          pinStatusLabel.classList.remove('disabled');
+
+          pinStatusLabel.addEventListener('click', handlePinStatus);
         }
-        
+       
         // #### PIn Status Button END ####
 
     </script>

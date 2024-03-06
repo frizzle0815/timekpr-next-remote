@@ -154,5 +154,5 @@ def verify_pin_route():
     if is_valid_pin:
         return jsonify({'result': 'success', 'message': 'PIN is correct'}), 200
     else:
-        return jsonify({'result': 'fail', 'message': 'Incorrect PIN'}), 403
+        return jsonify({'result': 'fail', 'message': 'Incorrect PIN'}), 200
 
