@@ -363,6 +363,24 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
 
     return result # "queued" when no ssh connection, "success" when successful, "fail" when failed
 
+def is_time_change_outdated(timeframe, timestamp):
+    current_time = datetime.now()
+    change_time = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
+
+    if timeframe == 'daily' and change_time.date() < current_time.date():
+        return True
+    elif timeframe == 'playtime' and change_time.date() < current_time.date():
+        return True
+    elif timeframe == 'weekly':
+        current_week = current_time.isocalendar()[1]
+        change_week = change_time.isocalendar()[1]
+        if change_week < current_week:
+            return True
+    elif timeframe == 'monthly' and (change_time.month < current_time.month or change_time.year < current_time.year):
+        return True
+
+    return False
+
 def process_pending_time_changes(computer, ssh):
     database = configparser.ConfigParser()
     database.read('database.ini')
@@ -370,12 +388,18 @@ def process_pending_time_changes(computer, ssh):
 
     if 'time_changes' in database.sections():
         for key, value in database.items('time_changes'):
-            # Extract computer and user from the key and check if it matches the given computer
-            key_computer, user, _ = key.split('_')  # Assuming the key format is "computer_user_timestamp"
+            # Extract computer, user, and timestamp from the key
+            key_computer, user, timestamp = key.split('_')
             if key_computer == computer and value.endswith("pending"):
                 # Extract action, seconds, timeframe, and status from the value
                 action, seconds, timeframe, status = value.split(',')
-                success = False
+
+                # Check if the time change is outdated
+                if is_time_change_outdated(timeframe, timestamp):
+                    # Set status to "outdated" and skip processing this change
+                    database.set('time_changes', key, f"{action},{seconds},{timeframe},outdated")
+                    print(f"Time change for user {user} is outdated and will not be processed.")
+                    continue
 
                 # Call adjust_time with the appropriate parameters based on the action and timeframe
                 success = adjust_time(timeframe, action, seconds, ssh, user, computer)
@@ -385,7 +409,7 @@ def process_pending_time_changes(computer, ssh):
                     new_status = "success"
                     database.set('time_changes', key, f"{action},{seconds},{timeframe},{new_status}")
                 else:
-                    # Print the message indicating that the attempt failed and will be retried next time
+                    overall_success = False
                     print(f"Attempt to adjust time for user {user} failed. Retrying next time...")
 
         # Write the changes back to database.ini file if any changes were made
