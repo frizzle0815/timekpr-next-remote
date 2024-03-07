@@ -21,7 +21,7 @@ background_service_event = threading.Event()
 ##### Initializing Start #####
 
 default_user_settings = {
-    'background_service': 'true',
+    'background_service': 'false',
     'show_time_change': 'true',
     'option3': 'false',
 }

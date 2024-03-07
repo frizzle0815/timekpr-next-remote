@@ -592,15 +592,14 @@
                         // Hide the loading element
                         $('#' + user + rand_dom + " .loading").stop(true, true).hide();
 
+                        // Disable Buttons until first succesfull connection
                         if (usage.last_seen !== "Never" && isBackgroundServiceEnabled) {
-                            // Enable if backgroundservice is true
                             $('#' + user + rand_dom + ' .btn').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .btn-check').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .form-range').removeClass("disabled").prop('disabled', false);
                         }
-
+                        // If Background Service is disabled activate buttons only if user is online
                         if (usage.last_seen !== "Never" && usage.online_status === 'Online') {
-                            // If backgroundservice is false one enable when user is
                             $('#' + user + rand_dom + ' .btn').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .btn-check').removeClass("disabled").prop('disabled', false);
                             $('#' + user + rand_dom + ' .form-range').removeClass("disabled").prop('disabled', false);
@@ -718,43 +717,85 @@
                     $('label[for="daily' + rand_dom + '"]').show();
                 }
 
-                // Calculation for ProgressBar
+                // Show updated limits even if "last seen" is older than yesterday/last week/last month
+                var timestampStr = usage.timestamp;
+                var timestampParts = timestampStr.split(/[- :.]/); // Split by the separators
+                var timestampDate = new Date(
+                    parseInt(timestampParts[0], 10), // year
+                    parseInt(timestampParts[1], 10) - 1, // month (0-based index)
+                    parseInt(timestampParts[2], 10), // day
+                    parseInt(timestampParts[3], 10), // hours
+                    parseInt(timestampParts[4], 10), // minutes
+                    parseInt(timestampParts[5], 10) // seconds (we ignore the fractional part)
+                );
+
+                var currentDate = new Date();
+                var yesterday = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1);
+                var lastMonday = new Date();
+                lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() || 7) + 1);
+                lastMonday.setHours(0, 0, 0, 0); // Set to the beginning of last Monday
+                var firstDayOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+                // Check if the timestamp is from yesterday or before
+                var isFromYesterdayOrBefore = timestampDate < yesterday;
+                // Check if the timestamp is from last week or before
+                var isFromLastWeekOrBefore = timestampDate < lastMonday;
+                // Check if the timestamp is from last month or before
+                var isFromLastMonthOrBefore = timestampDate < firstDayOfCurrentMonth;
+
+                // Calculate the total time and playtime (there is no value for that in the usage data from timekpr)
                 var timeTotal = usage.time_spent + usage.time_left;
                 var playtimeTotal = usage.playtime_spent + usage.playtime_left;
-                
-                var timeSpentPercent = (usage.time_left / timeTotal) * 100;
-                var playtimeSpentPercent = (usage.playtime_left / playtimeTotal) * 100;
-                var weekSpentPercent = (usage.week_left / usage.week_limit) * 100;
-                var monthSpentPercent = (usage.month_left / usage.month_limit) * 100;
 
-                // Update Progress Bar
+                // Determine the .time_left value based on the timestamp
+                var timeLeftToShow = isFromYesterdayOrBefore ? Math.min(timeTotal, usage.week_left, usage.month_left) : usage.time_left;
+                // Determine the .week_left value based on the timestamp
+                var weekLeftToShow = isFromLastWeekOrBefore ? usage.week_limit : usage.week_left;
+                // Determine the .month_left value based on the timestamp
+                var monthLeftToShow = isFromLastMonthOrBefore ? usage.month_limit : usage.month_left;
+                // Determine the .playtime_left value based on the timestamp
+                var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.playtime_left;
+
+                // Calculation for ProgressBars
+                var timeSpentPercent = (timeLeftToShow / timeTotal) * 100;
+                var playtimeSpentPercent = (playtimeLeftToShow / playtimeTotal) * 100;
+                var weekSpentPercent = (weekLeftToShow / usage.week_limit) * 100;
+                var monthSpentPercent = (monthLeftToShow / usage.month_limit) * 100;
+
+                // Update Progress Bar for time left
                 $('#' + user + rand_dom + " .progress-bar.time_left")
                     .css('width', timeSpentPercent + '%')
                     .attr('aria-valuenow', timeSpentPercent)
-                    .html(secondsToHms(usage.time_left) + ' (' + timeSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(timeLeftToShow) + ' (' + timeSpentPercent.toFixed(2) + '%)');
+
+                // Update Progress Bar for playtime left
                 $('#' + user + rand_dom + " .progress-bar.playtime_left")
                     .css('width', playtimeSpentPercent + '%')
                     .attr('aria-valuenow', playtimeSpentPercent)
-                    .html(secondsToHms(usage.playtime_left) + ' (' + playtimeSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(playtimeLeftToShow) + ' (' + playtimeSpentPercent.toFixed(2) + '%)');
+
+                // Update Progress Bar for week left
                 $('#' + user + rand_dom + " .progress-bar.week_left")
                     .css('width', weekSpentPercent + '%')
                     .attr('aria-valuenow', weekSpentPercent)
-                    .html(secondsToHms(usage.week_left) + ' (' + weekSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(weekLeftToShow) + ' (' + weekSpentPercent.toFixed(2) + '%)');
+
+                // Update Progress Bar for month left
                 $('#' + user + rand_dom + " .progress-bar.month_left")
                     .css('width', monthSpentPercent + '%')
                     .attr('aria-valuenow', monthSpentPercent)
-                    .html(secondsToHms(usage.month_left) + ' (' + monthSpentPercent.toFixed(2) + '%)');
+                    .html(secondsToHms(monthLeftToShow) + ' (' + monthSpentPercent.toFixed(2) + '%)');
 
                 // Update other values
                 $('#' + user + rand_dom + " .timestamp").html(usage.timestamp);
                 $('#' + user + rand_dom + " .last_seen").html(usage.last_seen);
-                $('#' + user + rand_dom + " .time_left").html(secondsToHms(usage.time_left));
+                $('#' + user + rand_dom + " .time_left").html(secondsToHms(timeLeftToShow));
                 $('#' + user + rand_dom + " .time_total").html(secondsToHms(timeTotal));
-                $('#' + user + rand_dom + " .playtime_left").html(secondsToHms(usage.playtime_left));
+                $('#' + user + rand_dom + " .playtime_left").html(secondsToHms(playtimeLeftToShow));
                 $('#' + user + rand_dom + " .playtime_total").html(secondsToHms(playtimeTotal));
-                $('#' + user + rand_dom + " .week_left").html(secondsToHms(usage.week_left));
+                $('#' + user + rand_dom + " .week_left").html(secondsToHms(weekLeftToShow));
                 $('#' + user + rand_dom + " .week_total").html(secondsToHms(usage.week_limit));
-                $('#' + user + rand_dom + " .month_left").html(secondsToHms(usage.month_left));
+                $('#' + user + rand_dom + " .month_left").html(secondsToHms(monthLeftToShow));
                 $('#' + user + rand_dom + " .month_total").html(secondsToHms(usage.month_limit));
                 var statusElement = $('#' + user + rand_dom + " .status");
                 var allProgressBars = $('#' + user + rand_dom + " .progress-bar");
