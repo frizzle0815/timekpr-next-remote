@@ -4,7 +4,6 @@
 import conf  # Used for accessing configuration variables like `conf.trackme`, `conf.ssh_password`, etc.
 import configparser  # Used for reading and writing the 'database.ini' file
 import os  # Used to check if the 'database.ini' file exists with os.path.isfile
-import re  # If you are using regular expressions in your code
 import functools  # Used to override the print function for flushing output
 from fabric import Connection  # Used to establish SSH connections
 from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsError  # Used to handle SSH connection exceptions
@@ -13,7 +12,7 @@ import threading  # Used to create and manage threading events and threads
 import time  # Used to create sleep delays in threads
 import socket  # Used to handle socket.timeout exception which can occur during SSH connection
 
-print = functools.partial(print, flush=True) # for debugging, print messages show up in docker logs
+print = functools.partial(print, flush=True)  # for debugging, print messages show up in docker logs
 
 # Create a threading event that can be set or cleared to control the loop
 background_service_event = threading.Event()
@@ -74,13 +73,17 @@ else:
 
 ##### Initializing End #####
 
+
 ##### Background Service Start #####
 
 def check_connection():
     while background_service_event.is_set():
+
+        is_time_change_outdated()  # Check if there are outdated time changes
+
         config = configparser.ConfigParser()
         config.read('database.ini')
-        
+
         for computer, userArrays in conf.trackme.items():
             for users in userArrays:  # More than one user on one device
                 user = users[0]  # Use only first value in array = use user and ignore display_name
@@ -100,6 +103,7 @@ def check_connection():
 
         time.sleep(30)  # Waiting time between checks
 
+
 def start_background_service():
     if not background_service_event.is_set():
         background_service_event.set()
@@ -108,6 +112,7 @@ def start_background_service():
         t.start()
         print("Background service started.")
 
+
 def stop_background_service():
     if background_service_event.is_set():
         background_service_event.clear()
@@ -115,7 +120,8 @@ def stop_background_service():
 
 ##### Background Service End #####
 
-##### Update Timekpr Userinfo Start ##### 
+
+##### Update Timekpr Userinfo Start #####
 
 def get_config():
     config_data = {
@@ -124,9 +130,11 @@ def get_config():
     }
     return config_data
 
+
 def verify_pin(pin_provided):
     stored_pin = conf.pin_code
     return pin_provided == stored_pin
+
 
 def get_connection(computer):
 
@@ -148,24 +156,25 @@ def get_connection(computer):
     except AuthenticationException as e:
         print(f"Wrong credentials for user '{conf.ssh_user}' on host '{computer}'. "
               f"Check `ssh_user` and `ssh_password` credentials in conf.py.")
-        connection= None
-        raise # handle exception in function that called this one
+        connection = None
+        raise  # handle exception in function that called this one
     except NoValidConnectionsError as e:
         print(f"Cannot connect to SSH server on host '{computer}'. "
               f"Check address in conf.py or try again later.")
-        connection= None
-        raise # handle exception in function that called this one
+        connection = None
+        raise  # handle exception in function that called this one
     except socket.timeout as e:
         print(f"Connection timed out on '{computer}'.")
-        connection= None
-        raise    
+        connection = None
+        raise
     except Exception as e:
         print(f"Error logging in as user '{conf.ssh_user}' on host '{computer}', check conf.py. \n\n\t" + str(e))
-        connection= None
-        raise # handle exception in function that called this one
+        connection = None
+        raise  # handle exception in function that called this one
     finally:
-        print(f"Connection is: '{connection}'.") ## Debug
+        print(f"Connection is: '{connection}'.")  # Debug
         return connection
+
 
 def update_userinfo(ssh, computer, user):
     try:
@@ -217,27 +226,34 @@ def save_to_ini(user, computer, timekpra_userinfo_output):
         database.write(database_file)
         print(f"{__file__} {__name__}: SUCCESS: usage for {user} on {computer} updated.")
 
-##### Update Timekpr Userinfo End ##### 
+##### Update Timekpr Userinfo End #####
 
-##### Update Web Frontend Start ##### 
+
+##### Update Web Frontend Start #####
 
 def get_database(user, computer):
     database = configparser.ConfigParser()
     database.read('database.ini')
     section_name = f'{computer}_{user}'
-    
+
     # Check if the section exists
     if not database.has_section(section_name):
         # If the section does not exist, inform the user and use default values
         error_message = f"Section {section_name} not found in database.ini; using default values."
         section_name = 'DEFAULT_USAGE'  # Set to DEFAULT so it pulls the default values
-    
+
     # Extract values using the DEFAULT section as fallback
     timestamp = database.get(section_name, 'TIMESTAMP', fallback='Never')
-    time_left = database.getint(section_name, 'ACTUAL_TIME_LEFT_DAY', fallback=0)
-    time_spent = database.getint(section_name, 'ACTUAL_TIME_SPENT_DAY', fallback=0)
+    time_left = database.getint(section_name, 'TIME_LEFT_DAY', fallback=0)
+    time_spent = database.getint(section_name, 'TIME_SPENT_DAY', fallback=0)
+    time_total_str = database.get(section_name, 'LIMITS_PER_WEEKDAYS', fallback="0;0;0;0;0;0;0")
+    time_total = [int(x) for x in time_total_str.split(';') if x.isdigit()]  # Convert the string to a list of integers
+    actual_time_left = database.getint(section_name, 'ACTUAL_TIME_LEFT_DAY', fallback=0)
+    actual_time_spent = database.getint(section_name, 'ACTUAL_TIME_SPENT_DAY', fallback=0)
     playtime_left = database.getint(section_name, 'ACTUAL_PLAYTIME_LEFT_DAY', fallback=0)
     playtime_spent = database.getint(section_name, 'PLAYTIME_SPENT_DAY', fallback=0)
+    playtime_total_str = database.get(section_name, 'PLAYTIME_LIMITS_PER_WEEKDAYS', fallback="0;0;0;0;0;0;0")
+    playtime_total = [int(x) for x in playtime_total_str.split(';') if x.isdigit()]  # Convert the string to a list of integers
     week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
     week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
     month_spent = database.getint(section_name, 'TIME_SPENT_MONTH', fallback=0)
@@ -246,7 +262,7 @@ def get_database(user, computer):
     month_left = month_limit - month_spent
     playtime_enabled = database.getboolean(section_name, 'PLAYTIME_ENABLED', fallback=False)
     playtime_limit_override_enabled = database.getboolean(section_name, 'PLAYTIME_LIMIT_OVERRIDE_ENABLED', fallback=False)
-    
+
     # Calculate last_seen
     last_seen = ""
     if timestamp == "-1":
@@ -278,10 +294,14 @@ def get_database(user, computer):
     usage = {
         'timestamp': timestamp,
         'last_seen': last_seen,
-        'time_left': time_left, 
+        'time_left': time_left,
         'time_spent': time_spent,
+        'time_total': time_total,
+        'actual_time_left': actual_time_left,
+        'actual_time_spent': actual_time_spent,
         'playtime_left': playtime_left,
         'playtime_spent': playtime_spent,
+        'playtime_total': playtime_total,
         'week_left': week_left,
         'week_spent': week_spent,
         'week_limit': week_limit,
@@ -304,7 +324,8 @@ def get_database(user, computer):
 
     return usage
 
-##### Update Web Frontend End ##### 
+##### Update Web Frontend End #####
+
 
 ##### Time Change Queue Start #####
 
@@ -361,25 +382,55 @@ def queue_time_change(user, computer, action, seconds, timeframe, status='pendin
     except Exception as e:
         print(f"An error occurred while updating the database.ini file: {e}")
 
-    return result # "queued" when no ssh connection, "success" when successful, "fail" when failed
+    return result  # "queued" when no ssh connection, "success" when successful, "fail" when failed
 
-def is_time_change_outdated(timeframe, timestamp):
+
+def is_time_change_outdated():
+    # Load the database
+    database = configparser.ConfigParser()
+    database.read('database.ini')
+
+    if 'time_changes' not in database.sections():
+        return False  # No time changes to process
+
+    changes_made = False
     current_time = datetime.now()
-    change_time = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
 
-    if timeframe == 'daily' and change_time.date() < current_time.date():
-        return True
-    elif timeframe == 'playtime' and change_time.date() < current_time.date():
-        return True
-    elif timeframe == 'weekly':
-        current_week = current_time.isocalendar()[1]
-        change_week = change_time.isocalendar()[1]
-        if change_week < current_week:
-            return True
-    elif timeframe == 'monthly' and (change_time.month < current_time.month or change_time.year < current_time.year):
-        return True
+    for key, value in database.items('time_changes'):
+        # Only process pending changes
+        if value.endswith("pending"):
+            # Extract computer, user, timestamp, action, seconds, timeframe, and status from the key and value
+            key_computer, user, timestamp = key.split('_')
+            action, seconds, timeframe, status = value.split(',')
 
-    return False
+            change_time = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
+            outdated = False
+
+            if timeframe == 'daily' and change_time.date() < current_time.date():
+                outdated = True
+            elif timeframe == 'playtime' and change_time.date() < current_time.date():
+                outdated = True
+            elif timeframe == 'weekly':
+                current_week = current_time.isocalendar()[1]
+                change_week = change_time.isocalendar()[1]
+                if change_week < current_week:
+                    outdated = True
+            elif timeframe == 'monthly' and (change_time.month < current_time.month or change_time.year < current_time.year):
+                outdated = True
+
+            if outdated:
+                # Set status to "outdated"
+                database.set('time_changes', key, f"{action},{seconds},{timeframe},outdated")
+                print(f"Time change for user {user} is outdated and will not be processed.")
+                changes_made = True
+
+    # Save the changes to the database if any changes were made
+    if changes_made:
+        with open('database.ini', 'w') as configfile:
+            database.write(configfile)
+
+    return changes_made
+
 
 def process_pending_time_changes(computer, ssh):
     database = configparser.ConfigParser()
@@ -388,18 +439,12 @@ def process_pending_time_changes(computer, ssh):
 
     if 'time_changes' in database.sections():
         for key, value in database.items('time_changes'):
-            # Extract computer, user, and timestamp from the key
-            key_computer, user, timestamp = key.split('_')
+            # Extract computer and user from the key and check if it matches the given computer
+            key_computer, user, _ = key.split('_')  # Assuming the key format is "computer_user_timestamp"
             if key_computer == computer and value.endswith("pending"):
                 # Extract action, seconds, timeframe, and status from the value
                 action, seconds, timeframe, status = value.split(',')
-
-                # Check if the time change is outdated
-                if is_time_change_outdated(timeframe, timestamp):
-                    # Set status to "outdated" and skip processing this change
-                    database.set('time_changes', key, f"{action},{seconds},{timeframe},outdated")
-                    print(f"Time change for user {user} is outdated and will not be processed.")
-                    continue
+                success = False
 
                 # Call adjust_time with the appropriate parameters based on the action and timeframe
                 success = adjust_time(timeframe, action, seconds, ssh, user, computer)
@@ -409,7 +454,7 @@ def process_pending_time_changes(computer, ssh):
                     new_status = "success"
                     database.set('time_changes', key, f"{action},{seconds},{timeframe},{new_status}")
                 else:
-                    overall_success = False
+                    # Print the message indicating that the attempt failed and will be retried next time
                     print(f"Attempt to adjust time for user {user} failed. Retrying next time...")
 
         # Write the changes back to database.ini file if any changes were made
@@ -418,14 +463,15 @@ def process_pending_time_changes(computer, ssh):
 
     return overall_success # Return True if all changes were successful, False otherwise
 
+
 def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
     # Read the current limits from the database.ini file
     database = configparser.ConfigParser()
     database.read('database.ini')
-    
+
     # Construct the section name from the computer and user
     section_name = f"{computer}_{user}"
-    
+
     # Determine the current limit based on the timeframe
     if timeframe == 'weekly':
         current_limit_key = 'LIMIT_PER_WEEK'
@@ -462,7 +508,7 @@ def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
         command = f"{conf.ssh_timekpra_bin} {command_flag} {user} {seconds}"
     else:
         command = f"{conf.ssh_timekpra_bin} {command_flag} {user} {up_down_symbol} {seconds}"  # Ensure no space between up_down_symbol and seconds
-    
+
     try:
         print(f"Executing command: {command}")
         # Execute the command via SSH
@@ -474,6 +520,7 @@ def adjust_time(timeframe, up_down_string, seconds, ssh, user, computer):
         # Log the failure
         print(f"Failed to adjust time for user {user} on {computer} ({timeframe}): {e}")
         return False
+
 
 ##### Time Change Queue End #####
 

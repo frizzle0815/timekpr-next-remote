@@ -57,7 +57,7 @@
                 padding-left: 0;
             }
             .no-gutters > .col + .col {
-                margin-left: 2px; /* Oder ein anderer kleiner Wert, der Ihnen gefällt */
+                margin-left: 2px;
             }
 
             @keyframes blinker {
@@ -75,16 +75,15 @@
                ========================================================================== */
 
             .accordion-body {
-              /* Stellen Sie sicher, dass das accordion-body-Element eine definierte Position hat */
               position: relative;
             }
             .pin-overlay {
               position: absolute;
               top: 0;
               left: 0;
-              width: 100%; /* Füllt die Breite des Elternelements aus */
-              height: 100%; /* Füllt die Höhe des Elternelements aus */
-              background: rgba(235, 235, 235, 0.5); /* Semi-transparentes Overlay */
+              width: 100%;
+              height: 100%;
+              background: rgba(235, 235, 235, 0.5); /* Semi-transparent Overlay */
               z-index: 10; /* Stellen Sie sicher, dass das Overlay über anderen Inhalten liegt */
             }
 
@@ -730,31 +729,41 @@
                 );
 
                 var currentDate = new Date();
-                var yesterday = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1);
-                var lastMonday = new Date();
-                lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() || 7) + 1);
+                var beginningOfCurrentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+                beginningOfCurrentDay.setHours(0, 0, 0, 0); // Set to the beginning of the current day
+                var lastMonday = new Date(currentDate);
+                lastMonday.setDate(currentDate.getDate() - (currentDate.getDay() || 7) + 1);
                 lastMonday.setHours(0, 0, 0, 0); // Set to the beginning of last Monday
                 var firstDayOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                firstDayOfCurrentMonth.setHours(0, 0, 0, 0); // Set to the beginning of the current month
 
                 // Check if the timestamp is from yesterday or before
-                var isFromYesterdayOrBefore = timestampDate < yesterday;
+                var isFromYesterdayOrBefore = timestampDate < beginningOfCurrentDay;
                 // Check if the timestamp is from last week or before
                 var isFromLastWeekOrBefore = timestampDate < lastMonday;
                 // Check if the timestamp is from last month or before
                 var isFromLastMonthOrBefore = timestampDate < firstDayOfCurrentMonth;
 
-                // Calculate the total time and playtime (there is no value for that in the usage data from timekpr)
-                var timeTotal = usage.time_spent + usage.time_left;
-                var playtimeTotal = usage.playtime_spent + usage.playtime_left;
+                var dayOfWeekIndex = currentDate.getDay() - 1; // In JavaScript, getDay() returns 0 for Sunday, so we adjust it for Monday as the first day
+                if (dayOfWeekIndex === -1) dayOfWeekIndex = 6; // Adjust Sunday to be the last index
+
+                // Get the time limit for the current day of the week from the time_total array
+                var timeTotalForToday = usage.time_total.length > dayOfWeekIndex ? usage.time_total[dayOfWeekIndex] : 0;
+                // Get the playtime limit for the current day of the week from the playtime_total array
+                var playtimeTotalForToday = usage.playtime_total.length > dayOfWeekIndex ? usage.playtime_total[dayOfWeekIndex] : 0;
+
+                // Update the calculation for timeTotal and playtimeTotal
+                var timeTotal = timeTotalForToday;
+                var playtimeTotal = playtimeTotalForToday;
 
                 // Determine the .time_left value based on the timestamp
-                var timeLeftToShow = isFromYesterdayOrBefore ? Math.min(timeTotal, usage.week_left, usage.month_left) : usage.time_left;
+                var timeLeftToShow = isFromYesterdayOrBefore ? Math.min(timeTotal, usage.week_left, usage.month_left) : usage.actual_time_left;
+                // Determine the .playtime_left value based on the timestamp
+                var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.playtime_left;
                 // Determine the .week_left value based on the timestamp
                 var weekLeftToShow = isFromLastWeekOrBefore ? usage.week_limit : usage.week_left;
                 // Determine the .month_left value based on the timestamp
                 var monthLeftToShow = isFromLastMonthOrBefore ? usage.month_limit : usage.month_left;
-                // Determine the .playtime_left value based on the timestamp
-                var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.playtime_left;
 
                 // Calculation for ProgressBars
                 var timeSpentPercent = (timeLeftToShow / timeTotal) * 100;
@@ -797,6 +806,70 @@
                 $('#' + user + rand_dom + " .week_total").html(secondsToHms(usage.week_limit));
                 $('#' + user + rand_dom + " .month_left").html(secondsToHms(monthLeftToShow));
                 $('#' + user + rand_dom + " .month_total").html(secondsToHms(usage.month_limit));
+
+                // DEBUGGING START
+
+                // Define an object to hold all the variables you want to log
+                var debugInfo = {};
+
+                // Parsing the timestamp string from the usage data
+                debugInfo.timestampStr = usage.timestamp;
+                debugInfo.timestampParts = debugInfo.timestampStr.split(/[- :.]/); // Split by the separators
+                debugInfo.timestampDate = new Date(
+                    parseInt(debugInfo.timestampParts[0], 10), // year
+                    parseInt(debugInfo.timestampParts[1], 10) - 1, // month (0-based index)
+                    parseInt(debugInfo.timestampParts[2], 10), // day
+                    parseInt(debugInfo.timestampParts[3], 10), // hours
+                    parseInt(debugInfo.timestampParts[4], 10), // minutes
+                    parseInt(debugInfo.timestampParts[5], 10) // seconds (we ignore the fractional part)
+                );
+
+                debugInfo.currentDate = new Date();
+                debugInfo.beginningOfCurrentDay = new Date(debugInfo.currentDate.getFullYear(), debugInfo.currentDate.getMonth(), debugInfo.currentDate.getDate());
+                debugInfo.beginningOfCurrentDay.setHours(0, 0, 0, 0); // Set to the beginning of the current day
+
+                debugInfo.lastMonday = new Date(debugInfo.currentDate);
+                debugInfo.lastMonday.setDate(debugInfo.currentDate.getDate() - (debugInfo.currentDate.getDay() || 7) + 1);
+                debugInfo.lastMonday.setHours(0, 0, 0, 0); // Set to the beginning of last Monday
+
+                debugInfo.firstDayOfCurrentMonth = new Date(debugInfo.currentDate.getFullYear(), debugInfo.currentDate.getMonth(), 1);
+                debugInfo.firstDayOfCurrentMonth.setHours(0, 0, 0, 0); // Set to the beginning of the current month
+
+                // Assuming 'timestampDate' is already defined and is a Date object
+                // Check if the timestamp is from yesterday or before
+                debugInfo.isFromYesterdayOrBefore = debugInfo.timestampDate < debugInfo.beginningOfCurrentDay;
+                // Check if the timestamp is from last week or before
+                debugInfo.isFromLastWeekOrBefore = debugInfo.timestampDate < debugInfo.lastMonday;
+                // Check if the timestamp is from last month or before
+                debugInfo.isFromLastMonthOrBefore = debugInfo.timestampDate < debugInfo.firstDayOfCurrentMonth;
+
+                // Calculating the total time and playtime
+                debugInfo.timeTotal = usage.time_spent + usage.time_left;
+                debugInfo.playtimeTotal = usage.playtime_spent + usage.playtime_left;
+
+                // Determining the values to show based on the timestamp
+                debugInfo.timeLeftToShow = debugInfo.isFromYesterdayOrBefore ? Math.min(debugInfo.timeTotal, usage.week_left, usage.month_left) : usage.actual_time_left;
+                debugInfo.weekLeftToShow = debugInfo.isFromLastWeekOrBefore ? usage.week_limit : usage.week_left;
+                debugInfo.monthLeftToShow = debugInfo.isFromLastMonthOrBefore ? usage.month_limit : usage.month_left;
+                debugInfo.playtimeLeftToShow = debugInfo.isFromYesterdayOrBefore ? debugInfo.playtimeTotal : usage.playtime_left;
+
+                // Calculating percentages for the progress bars
+                debugInfo.timeSpentPercent = (debugInfo.timeLeftToShow / debugInfo.timeTotal) * 100;
+                debugInfo.playtimeSpentPercent = (debugInfo.playtimeLeftToShow / debugInfo.playtimeTotal) * 100;
+                debugInfo.weekSpentPercent = (debugInfo.weekLeftToShow / usage.week_limit) * 100;
+                debugInfo.monthSpentPercent = (debugInfo.monthLeftToShow / usage.month_limit) * 100;
+
+                // Log all the debug information at once
+                console.log("Debug Information:", debugInfo);
+
+                console.log("Usage Data:", usage);
+
+                // DEBUGGING END
+
+
+
+
+                // Animate Progress Bar when Online
                 var statusElement = $('#' + user + rand_dom + " .status");
                 var allProgressBars = $('#' + user + rand_dom + " .progress-bar");
                 if (usage.online_status === 'Online') {
@@ -1024,14 +1097,15 @@
                 return "none";
             }
             d = Number(d);
-            var h = Math.floor(d / 3600);
+            var days = Math.floor(d / 86400);
+            var h = Math.floor(d % 86400 / 3600);
             var m = Math.floor(d % 3600 / 60);
-            var s = Math.floor(d % 3600 % 60);
-
+            var s = Math.floor(d % 60);
+            var daysDisplay = days > 0 ? days + (days === 1 ? " day " : " days ") : "";
             var hDisplay = h > 0 ? h + (h === 1 ? " hr " : " hrs ") : "";
             var mDisplay = m > 0 ? m + (m === 1 ? " min " : " mins ") : "";
             var sDisplay = s > 0 ? s + (s === 1 ? " sec" : " secs") : "";
-            return hDisplay + mDisplay + sDisplay;
+            return daysDisplay + hDisplay + mDisplay + sDisplay;
         }
 
         /**

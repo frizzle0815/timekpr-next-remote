@@ -2,17 +2,19 @@
 
 import main  # Access functions from main.py
 from flask import Flask, render_template, request, jsonify, send_from_directory  # Flask-related functionality
-import configparser  # Used for reading and writing 'database.ini' within the update_settings function
+import configparser  # Used for reading and writing 'database.ini'
 import os  # Used to locate the 'favicon.ico' file within the static directory
-from datetime import datetime # Used to format timestamps
-from conf import pin_required, pin_code
+from datetime import datetime  # Used to format timestamps
+from conf import pin_required, pin_code  # Import PIN settings
 
 app = Flask(__name__)
+
 
 @app.route("/config")
 def config():
     config_data = main.get_config()
     return jsonify(config_data)
+
 
 @app.route("/get_database/<computer>/<user>")
 def get_database(computer, user):
@@ -46,6 +48,7 @@ def get_database(computer, user):
     print(f"{__file__} {__name__}: {usage}")
     return jsonify(usage), 200
 
+
 @app.route("/queue_time_change", methods=['POST'])
 def queue_time_change():
     try:
@@ -59,22 +62,23 @@ def queue_time_change():
         seconds = data['seconds']
         timeframe = data['timeframe']
         status = data['status']
-        
+
         # Call the queue_time_change function and get the result
         result = main.queue_time_change(user, computer, action, seconds, timeframe, status)
-        
+
         # Return the result to the frontend
         return jsonify({'result': result}), 200
     except Exception as e:
         print("Error processing request:", e)
         return jsonify({'error': str(e)}), 400
 
+
 @app.route('/update_settings', methods=['POST'])
 def update_settings():
     print('Received form data:', request.form)
     option = request.form.get('option')
     value = request.form.get('value')
-    
+
     # Check if the required data is present
     if not option or value is None:
         print('Missing data in request!')
@@ -99,9 +103,10 @@ def update_settings():
             main.start_background_service()
         elif value == 'false':
             main.stop_background_service()
-        
+
     # Return a JSON response with the updated setting
     return jsonify({option: value})
+
 
 #### Give database.ini to web frontend Start #####
 
@@ -117,10 +122,12 @@ def format_timestamp(value, format='%Y-%m-%d %H:%M:%S'):
     except ValueError:
         return value  # Return the original value if there's an error
 
+
 # Register the filter with the Jinja2 environment
 app.jinja_env.filters['format_timestamp'] = format_timestamp
 
 ##### Formatting Functions for web frontend End #####
+
 
 def read_database_ini():
     database = configparser.ConfigParser()
@@ -129,30 +136,31 @@ def read_database_ini():
     normalized_database = {section.lower(): {key.lower(): value for key, value in database.items(section)} for section in database.sections()}
     return normalized_database
 
+
 @app.route('/')
 def index():
     database = read_database_ini()
     return render_template('index.html', database=database)
 
-#### Give database.ini to web frontend End #####
+##### Give database.ini to web frontend End #####
 
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
-        'favicon.ico',mimetype='image/vnd.microsoft.icon')
+        'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 
 @app.route('/verify_pin', methods=['POST'])
 def verify_pin_route():
     pin_provided = request.form.get('pin')
     if not pin_provided:
         return jsonify({'result': 'fail', 'message': 'No PIN provided'}), 400
-    
+
     # Call the function from main.py to verify the PIN
     is_valid_pin = main.verify_pin(pin_provided)
-    
+
     if is_valid_pin:
         return jsonify({'result': 'success', 'message': 'PIN is correct'}), 200
     else:
         return jsonify({'result': 'fail', 'message': 'Incorrect PIN'}), 200
-
