@@ -70,6 +70,105 @@
               animation: blinker 1.5s linear infinite;
             }
 
+            .time-input {
+                color: #0d6efd; /* Setzt die Textfarbe auf Blau */
+                border: none; /* Entfernt den Rahmen */
+                outline: none; /* Entfernt den Fokus-Rahmen */
+                width: auto; /* Setzt die Breite des Eingabefelds auf Auto */
+                background: transparent; /* Setzt den Hintergrund auf transparent */
+                text-align: center; /* Zentriert den Text im Eingabefeld */
+            }
+
+            .time-input:focus,
+            .time-input:hover {
+                background: transparent; /* Behält den transparenten Hintergrund bei */
+                color: #0d6efd; /* Behält die blaue Textfarbe bei */
+                outline: none; /* Entfernt den Fokus-Rahmen, falls noch vorhanden */
+            }
+
+            /* Optional: Stil für das Eingabefeld, wenn es deaktiviert ist */
+            .time-input:disabled {
+                color: #0d6efd; /* Setzt die Textfarbe auf Blau */
+            }
+
+            /* Stil für den umgebenden div-Container */
+            .col-12.btn.btn-outline-primary.disabled.d-flex.justify-content-center {
+                justify-content: center; /* Zentriert die Inhalte horizontal */
+                display: flex; /* Aktiviert Flexbox */
+                flex-direction: row; /* Setzt die Flex-Richtung auf horizontal */
+                align-items: center; /* Zentriert die Inhalte vertikal */
+            }
+
+            .col-12.btn.btn-outline-primary.disabled.d-flex.justify-content-center:focus,
+            .col-12.btn.btn-outline-primary.disabled.d-flex.justify-content-center:hover {
+                background: transparent !important; /* Behält den transparenten Hintergrund bei */
+            }
+
+            /* ==========================================================================
+               Timeline Stuff
+               ========================================================================== */
+
+            .timeline {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 5px;
+            }
+
+            .time-block {
+              display: flex; /* Ermöglicht das Nebeneinanderstellen der inneren Divs */
+              flex: 1;
+              height: 15px;
+              box-sizing: border-box;
+              position: relative;
+              border-right: 1px solid #b0b3b6; /* Linie zwischen den Stundenblöcken */
+            }
+
+            .time-block:last-child {
+              border-right: none; /* Keine Linie nach dem letzten Block */
+            }
+
+            .time-block > div {
+              height: 100%; /* Stellt sicher, dass die Divs die volle Höhe des Elternelements einnehmen */
+              border-right: none; /* Entfernt die Linie zwischen den geteilten Divs */
+            }
+
+            .time-block:first-child > div:first-child {
+                border-top-left-radius: 4px;
+                border-bottom-left-radius: 4px;
+            }
+
+            .time-block:last-child > div:last-child {
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+
+            .unlimited,
+            .allowed,
+            .not-allowed {
+              flex-grow: 1; /* Ermöglicht es den Divs, den verfügbaren Platz auszufüllen */
+            }
+
+            .unlimited {
+              background-color: #0daf5d;
+            }
+
+            .allowed {
+              background-color: #0d6efd;
+            }
+
+            .not-allowed {
+              background-color: #e9ecef;
+            }
+
+            .current-time-marker {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 2px; /* Breite des Strichs */
+                background-color: #d9534f; /* Farbe des Strichs */
+                z-index: 10;
+            }
+
             /* ==========================================================================
                PIN Stuff
                ========================================================================== */
@@ -434,6 +533,7 @@
     <label class="btn btn-outline-primary no-focus" id="toggle_theme">Toggle Theme</label>
     <label class="btn btn-outline-primary no-focus" id="auto_update">Auto Update: <span id="status-background_service" class="svg-icon-adjust"><!-- Updated by script --></span></label>
     <label class="btn btn-outline-primary no-focus" id="pin_status">PIN: <span id="pin_status_icon" class="svg-icon-adjust"><!-- Updated by script --></span></label>
+    <label class="btn btn-outline-primary no-focus" id="countdown_label"><span id="countdown_timer">30</span></label>
   </div>
 
 </div>
@@ -445,6 +545,7 @@
         var isPinRequired = false;
         var isPinVerified = false;
         var verifiedPin = null;
+        var allUsers = [];
         $.getJSON( "/config", function( data ) {
             isPinRequired = data.pin_required;
             updatePinStatusIcon();
@@ -456,6 +557,12 @@
                     let rand_dom = '_' + uuidv4();
                     let user = userArray[0];
                     let display_name = userArray[1];
+                    allUsers.push({
+                        computer: computer,
+                        user: user,
+                        rand_dom: rand_dom,
+                        display_name: display_name
+                    });
                     // todo - click doesn't work and radio spans accross users'
 
                     // Append user elements to the 'people' container
@@ -469,6 +576,9 @@
                               "</h2>" +
                               "<div class='user-progress' data-toggle-target='#collapse" + rand_dom + "'>" +
                                 "<p class='h6'>[" + user + "@" + computer + "] - [<span class='status'>Unknown</span>]<span class='lastRelevantChange'></span></p>" +
+
+                                "<div class='timeline-wrapper' style='display: none;'>" +
+                                "</div>" +
 
                                 "<div class='monthly-wrapper' style='display: none;'>" +
                                   "Monthly Limit: <span class='time month_total'>...</span><br/>" +
@@ -534,8 +644,10 @@
                                 "</div>" +
 
                                 "<div class='row no-gutters mb-2' role='group' aria-label='Time Slider'>" +
-                                    "<div class='col-12 btn btn-outline-primary disabled'>" +
-                                        "<span id='slider-time-value" + rand_dom + "' class='w-100'>15 min</span>" +
+                                    "<div class='col-12 btn btn-outline-primary disabled d-flex justify-content-center'>" +
+                                      "<input type='number' id='time-value" + rand_dom + "' class='form-range time-input' placeholder='15' min='0' oninput='validateAndUpdateTimeValue(this, \"" + rand_dom + "\")' disabled />" +
+                                    "</div>" +
+                                    "<div class='col-12 btn btn-outline-primary disabled mt-2'>" +
                                         "<input type='range' class='form-range w-100 disabled' id='seconds" + rand_dom + "' name='seconds' min='60' max='3600' step='60' value='900' oninput='updateSliderValue(this.value, \"" + rand_dom + "\")' disabled />" +
                                     "</div>" +
                                 "</div>" +
@@ -623,9 +735,53 @@
             });
         });
 
-        function updateSliderValue(value, rand_dom) {
-            var minutes = value / 60;
-            $('#slider-time-value' + rand_dom).text(minutes + ' min');
+        function reloadAllUserData() {
+            allUsers.forEach(function(userObj) {
+                loadUserData(userObj.user, userObj.computer, userObj.rand_dom);
+            });
+        }
+
+        function loadUserData(user, computer, rand_dom) {
+            // Show loading message and disable buttons
+            $('#' + user + rand_dom + " .notify").show().html("Loading...");
+
+            // Start loading animation
+            var loadingInterval = setInterval(function() {
+                $('#' + user + rand_dom + " .loading").fadeIn(1300).fadeOut(1300);
+            }, 1400);
+
+            // Load user data
+            $.getJSON("/get_database/" + computer + "/" + user, function(usage) {
+                // Data has been loaded, stop the loading animation
+                clearInterval(loadingInterval);
+                // Hide the loading element
+                $('#' + user + rand_dom + " .loading").stop(true, true).hide();
+
+                // Render user data to the DOM
+                render_user_to_dom(user, computer, usage, rand_dom);
+
+            }).fail(function() {
+                // If there's an error loading the data, stop the loading animation
+                clearInterval(loadingInterval);
+                $('#' + user + rand_dom + " .notify").html("Error loading data.");
+            });
+        }
+
+        // For Slider Input
+        function updateSliderValue(seconds, rand_dom) {
+            var minutes = Math.floor(seconds / 60);
+            document.getElementById('time-value' + rand_dom).value = minutes;
+        }
+
+        // For manual Input
+        function validateAndUpdateTimeValue(input, rand_dom) {
+            var minutes = parseInt(input.value, 10);
+            if (isNaN(minutes) || minutes < 0) {
+                input.value = 0;  // Invalid or negative values will be set to 0
+                minutes = 0;
+            }
+            var seconds = minutes * 60;
+            document.getElementById('seconds' + rand_dom).value = seconds;
         }
 
         function uuidv4() {
@@ -662,6 +818,75 @@
             });
         }
 
+        function createTimelineHtml(allowedHoursString) {
+            const allowedHoursArray = allowedHoursString.split(';');
+            const currentHour = new Date().getHours();
+            const currentMinute = new Date().getMinutes();
+            let timelineHtml = '<div class="timeline">';
+
+            // Initialize all hours as not allowed
+            let hourStatus = new Array(24).fill('not-allowed');
+
+            // Parse the allowed hours string and update the hourStatus array
+            allowedHoursArray.forEach(timeSpec => {
+                if (timeSpec.includes('[')) {
+                    // Specific allowed range within an hour
+                    const hour = parseInt(timeSpec);
+                    const range = timeSpec.match(/\[(\d+)-(\d+)\]/);
+                    if (range) {
+                        const start = parseInt(range[1], 10);
+                        const end = parseInt(range[2], 10);
+                        hourStatus[hour] = { type: 'range', start: start, end: end };
+                    }
+                } else if (timeSpec.startsWith('!')) {
+                    // Unlimited hours
+                    const hour = parseInt(timeSpec.substring(1));
+                    hourStatus[hour] = 'unlimited';
+                } else {
+                    // Entire hour allowed
+                    const hour = parseInt(timeSpec);
+                    hourStatus[hour] = 'allowed';
+                }
+            });
+
+            for (let hour = 0; hour < 24; hour++) {
+                // Construct the time block div(s)
+                timelineHtml += `<div class='time-block' data-hour='${hour}'>`;
+
+                const status = hourStatus[hour];
+                if (status === 'unlimited') {
+                    timelineHtml += `<div class='unlimited' style='flex: 1;'></div>`;
+                } else if (status === 'allowed') {
+                    timelineHtml += `<div class='allowed' style='flex: 1;'></div>`;
+                } else if (typeof status === 'object' && status.type === 'range') {
+                    const notAllowedWidthStart = (status.start / 60) * 100;
+                    const allowedWidth = ((status.end - status.start) / 60) * 100;
+                    if (notAllowedWidthStart > 0) {
+                        timelineHtml += `<div class='not-allowed' style='flex: ${notAllowedWidthStart};'></div>`;
+                    }
+                    timelineHtml += `<div class='allowed' style='flex: ${allowedWidth};'></div>`;
+                    if (notAllowedWidthStart + allowedWidth < 100) {
+                        timelineHtml += `<div class='not-allowed' style='flex: ${100 - notAllowedWidthStart - allowedWidth};'></div>`;
+                    }
+                } else {
+                    // Hour is not allowed
+                    timelineHtml += `<div class='not-allowed' style='flex: 1;'></div>`;
+                }
+
+                // Add the current time marker if it's the current hour
+                if (hour === currentHour) {
+                    const minutePercent = (currentMinute / 60) * 100;
+                    timelineHtml += `<div class='current-time-marker' style='left: ${minutePercent}%'></div>`;
+                }
+
+                // Close the time block div
+                timelineHtml += `</div>`;
+            }
+
+            timelineHtml += '</div>';
+            return timelineHtml;
+        }
+
         function render_user_to_dom(user, computer, usage, rand_dom){
             if(usage.result === 'success') {
                 // Success Notification
@@ -683,6 +908,7 @@
                 var showPlaytime = usage.playtime_enabled === true && usage.playtime_limit_override_enabled !== true; // show playtime if enabled and not overriden
 
                 $('#' + user + rand_dom + " .daily-wrapper").slideDown(); // always show daily
+                $('#' + user + rand_dom + " .timeline-wrapper").slideDown(); // always show timeline
 
                 if (showWeekly) {
                     $('#' + user + rand_dom + " .weekly-wrapper").slideDown();
@@ -715,6 +941,11 @@
                 } else {
                     $('label[for="daily' + rand_dom + '"]').show();
                 }
+
+                // Update the timeline
+                const allowedHoursString = "7;8;9;10;11[00-30];!14;!15;17;18;19;20[00-45]";
+                const timelineHtml = createTimelineHtml(allowedHoursString);
+                $('#' + user + rand_dom + ' .timeline-wrapper').html(timelineHtml);
 
                 // Show updated limits even if "last seen" is older than yesterday/last week/last month
                 var timestampStr = usage.timestamp;
@@ -752,14 +983,17 @@
                 // Get the playtime limit for the current day of the week from the playtime_total array
                 var playtimeTotalForToday = usage.playtime_total.length > dayOfWeekIndex ? usage.playtime_total[dayOfWeekIndex] : 0;
 
+                // actualTimeTotal can be smaller than timeTotalForToday if weekly/monthly limits are in place
+                var actualTimeTotal = usage.actual_time_left + usage.actual_time_spent;
+
                 // Update the calculation for timeTotal and playtimeTotal
-                var timeTotal = timeTotalForToday;
+                var timeTotal = Math.min(timeTotalForToday, actualTimeTotal);
                 var playtimeTotal = playtimeTotalForToday;
 
                 // Determine the .time_left value based on the timestamp
                 var timeLeftToShow = isFromYesterdayOrBefore ? Math.min(timeTotal, usage.week_left, usage.month_left) : usage.actual_time_left;
                 // Determine the .playtime_left value based on the timestamp
-                var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.playtime_left;
+                var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.actual_playtime_left;
                 // Determine the .week_left value based on the timestamp
                 var weekLeftToShow = isFromLastWeekOrBefore ? usage.week_limit : usage.week_left;
                 // Determine the .month_left value based on the timestamp
@@ -806,68 +1040,6 @@
                 $('#' + user + rand_dom + " .week_total").html(secondsToHms(usage.week_limit));
                 $('#' + user + rand_dom + " .month_left").html(secondsToHms(monthLeftToShow));
                 $('#' + user + rand_dom + " .month_total").html(secondsToHms(usage.month_limit));
-
-                // DEBUGGING START
-
-                // Define an object to hold all the variables you want to log
-                var debugInfo = {};
-
-                // Parsing the timestamp string from the usage data
-                debugInfo.timestampStr = usage.timestamp;
-                debugInfo.timestampParts = debugInfo.timestampStr.split(/[- :.]/); // Split by the separators
-                debugInfo.timestampDate = new Date(
-                    parseInt(debugInfo.timestampParts[0], 10), // year
-                    parseInt(debugInfo.timestampParts[1], 10) - 1, // month (0-based index)
-                    parseInt(debugInfo.timestampParts[2], 10), // day
-                    parseInt(debugInfo.timestampParts[3], 10), // hours
-                    parseInt(debugInfo.timestampParts[4], 10), // minutes
-                    parseInt(debugInfo.timestampParts[5], 10) // seconds (we ignore the fractional part)
-                );
-
-                debugInfo.currentDate = new Date();
-                debugInfo.beginningOfCurrentDay = new Date(debugInfo.currentDate.getFullYear(), debugInfo.currentDate.getMonth(), debugInfo.currentDate.getDate());
-                debugInfo.beginningOfCurrentDay.setHours(0, 0, 0, 0); // Set to the beginning of the current day
-
-                debugInfo.lastMonday = new Date(debugInfo.currentDate);
-                debugInfo.lastMonday.setDate(debugInfo.currentDate.getDate() - (debugInfo.currentDate.getDay() || 7) + 1);
-                debugInfo.lastMonday.setHours(0, 0, 0, 0); // Set to the beginning of last Monday
-
-                debugInfo.firstDayOfCurrentMonth = new Date(debugInfo.currentDate.getFullYear(), debugInfo.currentDate.getMonth(), 1);
-                debugInfo.firstDayOfCurrentMonth.setHours(0, 0, 0, 0); // Set to the beginning of the current month
-
-                // Assuming 'timestampDate' is already defined and is a Date object
-                // Check if the timestamp is from yesterday or before
-                debugInfo.isFromYesterdayOrBefore = debugInfo.timestampDate < debugInfo.beginningOfCurrentDay;
-                // Check if the timestamp is from last week or before
-                debugInfo.isFromLastWeekOrBefore = debugInfo.timestampDate < debugInfo.lastMonday;
-                // Check if the timestamp is from last month or before
-                debugInfo.isFromLastMonthOrBefore = debugInfo.timestampDate < debugInfo.firstDayOfCurrentMonth;
-
-                // Calculating the total time and playtime
-                debugInfo.timeTotal = usage.time_spent + usage.time_left;
-                debugInfo.playtimeTotal = usage.playtime_spent + usage.playtime_left;
-
-                // Determining the values to show based on the timestamp
-                debugInfo.timeLeftToShow = debugInfo.isFromYesterdayOrBefore ? Math.min(debugInfo.timeTotal, usage.week_left, usage.month_left) : usage.actual_time_left;
-                debugInfo.weekLeftToShow = debugInfo.isFromLastWeekOrBefore ? usage.week_limit : usage.week_left;
-                debugInfo.monthLeftToShow = debugInfo.isFromLastMonthOrBefore ? usage.month_limit : usage.month_left;
-                debugInfo.playtimeLeftToShow = debugInfo.isFromYesterdayOrBefore ? debugInfo.playtimeTotal : usage.playtime_left;
-
-                // Calculating percentages for the progress bars
-                debugInfo.timeSpentPercent = (debugInfo.timeLeftToShow / debugInfo.timeTotal) * 100;
-                debugInfo.playtimeSpentPercent = (debugInfo.playtimeLeftToShow / debugInfo.playtimeTotal) * 100;
-                debugInfo.weekSpentPercent = (debugInfo.weekLeftToShow / usage.week_limit) * 100;
-                debugInfo.monthSpentPercent = (debugInfo.monthLeftToShow / usage.month_limit) * 100;
-
-                // Log all the debug information at once
-                console.log("Debug Information:", debugInfo);
-
-                console.log("Usage Data:", usage);
-
-                // DEBUGGING END
-
-
-
 
                 // Animate Progress Bar when Online
                 var statusElement = $('#' + user + rand_dom + " .status");
@@ -1018,6 +1190,34 @@
                     scrollTop: $('#heading' + rand_dom).offset().top
                 }, 500); // duration 500ms
             });
+
+            function startCountdown(duration) {
+                var timer = duration, minutes, seconds;
+                var countdownInterval = setInterval(function () {
+                    seconds = parseInt(timer % 60, 10);
+
+                    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                    $('#countdown_timer').text(seconds);
+
+                    if (--timer < 0) {
+                        timer = duration;
+                    }
+                }, 1000);
+
+                return countdownInterval;
+            }
+
+            var countdown = startCountdown(30);
+
+            reloadAllUserData();
+            setInterval(function() {
+                reloadAllUserData();
+                // Reset countdown
+                clearInterval(countdown);
+                countdown = startCountdown(30);
+            }, 30000);
+
         });
 
         // #### PIN Section END ####

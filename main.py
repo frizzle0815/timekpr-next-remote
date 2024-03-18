@@ -250,10 +250,11 @@ def get_database(user, computer):
     time_total = [int(x) for x in time_total_str.split(';') if x.isdigit()]  # Convert the string to a list of integers
     actual_time_left = database.getint(section_name, 'ACTUAL_TIME_LEFT_DAY', fallback=0)
     actual_time_spent = database.getint(section_name, 'ACTUAL_TIME_SPENT_DAY', fallback=0)
-    playtime_left = database.getint(section_name, 'ACTUAL_PLAYTIME_LEFT_DAY', fallback=0)
+    playtime_left = database.getint(section_name, 'PLAYTIME_LEFT_DAY', fallback=0)
     playtime_spent = database.getint(section_name, 'PLAYTIME_SPENT_DAY', fallback=0)
     playtime_total_str = database.get(section_name, 'PLAYTIME_LIMITS_PER_WEEKDAYS', fallback="0;0;0;0;0;0;0")
     playtime_total = [int(x) for x in playtime_total_str.split(';') if x.isdigit()]  # Convert the string to a list of integers
+    actual_playtime_left = database.getint(section_name, 'ACTUAL_PLAYTIME_LEFT_DAY', fallback=0)
     week_spent = database.getint(section_name, 'TIME_SPENT_WEEK', fallback=0)
     week_limit = database.getint(section_name, 'LIMIT_PER_WEEK', fallback=0)
     month_spent = database.getint(section_name, 'TIME_SPENT_MONTH', fallback=0)
@@ -302,6 +303,7 @@ def get_database(user, computer):
         'playtime_left': playtime_left,
         'playtime_spent': playtime_spent,
         'playtime_total': playtime_total,
+        'actual_playtime_left': actual_playtime_left,
         'week_left': week_left,
         'week_spent': week_spent,
         'week_limit': week_limit,
