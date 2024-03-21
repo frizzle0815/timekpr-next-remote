@@ -149,7 +149,8 @@
             }
 
             .unlimited {
-              background-color: #0daf5d;
+              background-image: linear-gradient(45deg, #e9ecef 25%, #0d6efd 25%, #0d6efd 50%, #e9ecef 50%, #e9ecef 75%, #0d6efd 75%);
+              background-size: 14px 14px;
             }
 
             .allowed {
@@ -943,7 +944,7 @@
                 }
 
                 // Update the timeline
-                const allowedHoursString = "7;8;9;10;11[00-30];!14;!15;17;18;19;20[00-45]";
+                const allowedHoursString = usage.allowed_hours;
                 const timelineHtml = createTimelineHtml(allowedHoursString);
                 $('#' + user + rand_dom + ' .timeline-wrapper').html(timelineHtml);
 
@@ -987,11 +988,11 @@
                 var actualTimeTotal = usage.actual_time_left + usage.actual_time_spent;
 
                 // Update the calculation for timeTotal and playtimeTotal
-                var timeTotal = Math.min(timeTotalForToday, actualTimeTotal);
+                var timeTotal = isFromYesterdayOrBefore ? Math.min(timeTotalForToday, usage.week_left, usage.month_left) : actualTimeTotal;
                 var playtimeTotal = playtimeTotalForToday;
 
                 // Determine the .time_left value based on the timestamp
-                var timeLeftToShow = isFromYesterdayOrBefore ? Math.min(timeTotal, usage.week_left, usage.month_left) : usage.actual_time_left;
+                var timeLeftToShow = isFromYesterdayOrBefore ? timeTotal : usage.actual_time_left;
                 // Determine the .playtime_left value based on the timestamp
                 var playtimeLeftToShow = isFromYesterdayOrBefore ? playtimeTotal : usage.actual_playtime_left;
                 // Determine the .week_left value based on the timestamp

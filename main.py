@@ -263,6 +263,9 @@ def get_database(user, computer):
     month_left = month_limit - month_spent
     playtime_enabled = database.getboolean(section_name, 'PLAYTIME_ENABLED', fallback=False)
     playtime_limit_override_enabled = database.getboolean(section_name, 'PLAYTIME_LIMIT_OVERRIDE_ENABLED', fallback=False)
+    current_day = datetime.now().isoweekday()
+    allowed_hours_key = f'ALLOWED_HOURS_{current_day}'
+    allowed_hours = database.get(section_name, allowed_hours_key, fallback="")
 
     # Calculate last_seen
     last_seen = ""
@@ -312,6 +315,7 @@ def get_database(user, computer):
         'month_limit': month_limit,
         'playtime_enabled': playtime_enabled,
         'playtime_limit_override_enabled': playtime_limit_override_enabled,
+        'allowed_hours': allowed_hours,
         'result': 'success'
     }
 
